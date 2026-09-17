@@ -2,12 +2,13 @@
   "name": "dsh-profile-web",
   "private": true,
   "scripts": {
-    "postinstall": "node ./scripts/fix-pty-spawn-helper.mjs"
+    "postinstall": "node ./scripts/fix-pty-spawn-helper.mjs && node ./scripts/fix-auto-review-model-route.mjs"
   },
   "dependencies": {
+    "@openviking/dsh-memory-plugin": "^0.3.2",
+    "@tt-a1i/archify-dsh": "^0.1.0",
     "dsh-auto-review": "^0.12.4",
     "dsh-plugin-subscriptions": "^0.9.2",
-    "dsh-plugin-terminal": "^0.2.0",
     "dshmarket": "^1.47.0"
   },
   "dsh": {
@@ -18,7 +19,8 @@
         "dsh-plugin-subscriptions",
         "dshmarket",
         "dsh-auto-review",
-        "dsh-plugin-terminal"
+        "@tt-a1i/archify-dsh",
+        "@openviking/dsh-memory-plugin"
       ],
       "patchReload": "live"
     }

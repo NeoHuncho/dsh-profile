@@ -1,2 +1,7 @@
 {"at":"2026-09-17T19:14:21.701Z","level":"info","event":"region","detail":"no region on record; network check chose global"}
 {"at":"2026-09-17T19:34:27.111Z","level":"info","event":"restart","detail":"scheduled pid=77472 helper=88149"}
+{"at":"2026-09-17T19:49:07.210Z","level":"info","event":"restart","detail":"scheduled pid=94175 helper=98032"}
+{"at":"2026-09-17T20:00:06.624Z","level":"warn","event":"install-shadow","detail":"@tt-a1i/archify-dsh: introduced cross-layer duplicate loader names — @deepseek-ai/dsh-skill-filesystem (@deepseek-ai/dsh-base + @tt-a1i/archify-dsh)"}
+{"at":"2026-09-17T20:00:06.624Z","level":"info","event":"install","detail":"@tt-a1i/archify-dsh exit=0 hot=false"}
+{"at":"2026-09-17T20:00:23.457Z","level":"info","event":"install","detail":"@openviking/dsh-memory-plugin exit=0 hot=false"}
+{"at":"2026-09-17T20:01:37.603Z","level":"info","event":"restart","detail":"scheduled pid=347 helper=2534"}

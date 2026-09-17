@@ -27,6 +27,13 @@
     enableByDefault: true
     reviewerProvider: fork
     reviewerModel: gpt-5.6-luna
+    # Route the reviewer explicitly at the Codex subscription. Without this the
+    # bare Codex model id resolves against the session's default provider
+    # (claude), the child dies before its first step with stopReason "error",
+    # and fail-closed `fallbackPolicy: rejected` blocks every escalation.
+    reviewerLlmProvider: codex
+    # Codex runs Guardian at low effort: fast and cheap.
+    reviewerReasoningEffort: low
     reviewerTimeoutMs: 60000
     reviewerTools: [read, glob, grep]
     fallbackPolicy: rejected
