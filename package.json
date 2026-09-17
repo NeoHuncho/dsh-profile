@@ -1,0 +1,20 @@
+{
+  "name": "dsh-profile-web",
+  "private": true,
+  "dependencies": {
+    "dsh-plugin-subscriptions": "^0.9.2",
+    "dshmarket": "^1.47.0"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "dsh-plugin-subscriptions",
+        "dshmarket",
+        "dsh-plugin-restart"
+      ],
+      "patchReload": "live"
+    }
+  }
+}
