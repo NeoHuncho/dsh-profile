@@ -52,13 +52,13 @@
     # Deterministic hard stops that never reach the reviewer. Codex's policy
     # treats these as absolute-deny territory; `never` rejects before dispatch.
     riskRules:
-      - pattern: '(?i)rm\s+(-[a-zA-Z]+\s+)*(/|/\*|~|\$HOME)(\s|$)'
+      - pattern: '[rR][mM]\s+(-[a-zA-Z]+\s+)*(/|/\*|~|\$HOME)(\s|$)'
         policy: never
         field: arguments
-      - pattern: '(?i)(mkfs|dd\s+if=.*\s+of=/dev/|:\(\)\s*\{.*\};:)'
+      - pattern: '([mM][kK][fF][sS]|[dD][dD]\s+if=.*\s+of=/dev/|:\(\)\s*\{.*\};:)'
         policy: never
         field: arguments
-      - pattern: '(?i)git\s+push\s+.*--force(?!-with-lease)'
+      - pattern: '[gG][iI][tT]\s+push\s+.*--force(?!-with-lease)'
         policy: human
         field: arguments
     reviewerPolicyText: |

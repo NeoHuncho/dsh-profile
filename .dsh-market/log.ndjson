@@ -1,1 +1,2 @@
 {"at":"2026-09-17T19:14:21.701Z","level":"info","event":"region","detail":"no region on record; network check chose global"}
+{"at":"2026-09-17T19:34:27.111Z","level":"info","event":"restart","detail":"scheduled pid=77472 helper=88149"}
