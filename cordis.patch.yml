@@ -284,10 +284,22 @@
         concise sentence with the main reason, oriented around intrinsic risk.
 
 # ---------------------------------------------------------------------------
-# 2. Bottom native terminal panel
+# 2. Native terminal panel + Quick chats
 #
-# Real PTY (openpty on macOS) multi-tab terminal docked to the bottom of the
-# Web GUI, below the composer. Toggle with Ctrl+` .
-# Configured through the DSH settings document rather than this row; the
-# settings block lives in ~/.dsh/settings.yaml under `terminal:`.
+# Bottom-docked real-PTY terminal with tabs, split panes and shortcuts, plus a
+# workspace-free "Quick chats" group at the sidebar foot (above Settings).
+#
+# Replaces the community `dsh-plugin-terminal`, which crashed this profile: it
+# bundled its OWN node-pty (1.1.0) beside the copy DSH already loads
+# (1.2.0-beta.15). Two native PTY addons in one process is an ABI hazard, and
+# nested pnpm installs also skipped node-pty's chmod step, leaving
+# `spawn-helper` non-executable so every session died with "posix_spawnp
+# failed.". This package bundles NO native module: it allocates PTYs through
+# the host's own `ctx.subprocess.spawnTerminal` seam, so that whole class of
+# failure cannot recur.
+#
+# Shortcuts and font size live in ~/.dsh/settings.yaml under `native-terminal:`.
 # ---------------------------------------------------------------------------
+- insert:
+    - id: native-terminal
+      name: 'dsh-native-terminal'
