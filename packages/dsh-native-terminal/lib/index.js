@@ -20,6 +20,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { createHash } from 'node:crypto'
+import { statSync } from 'node:fs'
 import z from '@deepseek-ai/schemastery'
 
 export const name = 'dsh-native-terminal'
@@ -60,6 +61,19 @@ function defaultShellArgv(explicit) {
   const shell = process.env.SHELL ?? '/bin/bash'
   // Interactive login shell so the user's rc files and prompt apply.
   return [shell, '-l']
+}
+
+/**
+ * Prefix argv with `env NAME=VALUE ...` so those variables are set in the
+ * child's own environment, after node-pty has applied its own.
+ *
+ * Windows has no `env(1)`; there ConPTY does not force TERM, so the spawn
+ * environment already wins and the argv is returned unchanged.
+ */
+function wrapWithEnv(argv, vars) {
+  if (process.platform === 'win32') return argv
+  const assignments = Object.entries(vars).map(([key, value]) => `${key}=${value}`)
+  return ['/usr/bin/env', ...assignments, ...argv]
 }
 
 /**
@@ -129,7 +143,23 @@ export function apply(ctx, config) {
     if (sessions.size >= config.maxSessions) {
       throw new Error(`terminal session limit reached (${config.maxSessions})`)
     }
-    const argv = defaultShellArgv(settings.current().shellCommand)
+    const shellArgv = defaultShellArgv(settings.current().shellCommand)
+
+    // `spawnTerminal` is built for the agent's scripted tool use, so it pins
+    // node-pty to `name: 'dumb'`, which OVERRIDES the TERM we pass in `env`.
+    // A dumb terminal has no cursor addressing, so any prompt that repaints
+    // itself — git/branch segments, zsh-autosuggestions, right-hand prompts —
+    // corrupts: characters land at stale positions and segments disappear.
+    //
+    // Launching through `env(1)` sets TERM in the shell's OWN environment,
+    // after node-pty has applied its own. Verified: the prompt emits a clean
+    // `ESC[01;32m➜` instead of the corrupted `ESC[01;32m?➜`.
+    const argv = wrapWithEnv(shellArgv, {
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      DSH_NATIVE_TERMINAL: '1',
+    })
+
     const handle = await ctx.subprocess.spawnTerminal({
       argv,
       cwd,
@@ -140,7 +170,6 @@ export function apply(ctx, config) {
         ...process.env,
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor',
-        // Mark the provenance so shells/users can detect this panel.
         DSH_NATIVE_TERMINAL: '1',
       },
     })
@@ -155,6 +184,13 @@ export function apply(ctx, config) {
       sockets: new Set(),
       closed: false,
       exit: null,
+      // The live node-pty instance behind the handle. The public
+      // `SubprocessTerminalHandle` contract has no resize, but an interactive
+      // panel MUST tell the shell its real size or the shell keeps wrapping at
+      // 80 columns forever (verified: `tput cols` stayed 80 in a 150-column
+      // panel). Read defensively so a future host rename degrades to the old
+      // fixed-size behaviour rather than throwing.
+      resize: resolveResize(handle),
     }
     sessions.set(id, record)
 
@@ -275,11 +311,29 @@ export function apply(ctx, config) {
     return json(res, 404, { error: 'not found' })
   }
 
-  /** Clamp a requested cwd to something real; fall back to the user's home. */
+  /**
+   * Resolve the directory a new terminal starts in.
+   *
+   * Order: the workspace directory the client asked for, then the host's own
+   * working directory, then the user's home. `process.cwd()` comes before HOME
+   * because under launchd HOME can be absent, which is how terminals ended up
+   * at the filesystem root. A requested path that does not exist is reported
+   * rather than silently swapped, so a wrong cwd is visible instead of looking
+   * like the terminal ignored the workspace.
+   */
   function resolveCwd(requested) {
-    const home = process.env.HOME ?? process.cwd()
-    if (typeof requested !== 'string' || requested.trim().length === 0) return home
-    return requested
+    const fallback = process.cwd() || process.env.HOME || '/'
+    if (typeof requested !== 'string' || requested.trim().length === 0) return fallback
+    const target = requested.trim()
+    try {
+      if (statSync(target).isDirectory()) return target
+    } catch {
+      /* fall through to the fallback below */
+    }
+    ctx.logger?.warn?.(
+      `native-terminal: requested cwd ${JSON.stringify(target)} is not a directory; using ${fallback}`,
+    )
+    return fallback
   }
 
   // ── WebSocket data plane ──────────────────────────────────────────────────
@@ -341,9 +395,13 @@ export function apply(ctx, config) {
       }
       if (message?.type === 'signal' && typeof message.signal === 'string') {
         record.handle.signalForeground(message.signal).catch(() => {})
+        return
       }
-      // Resize is intentionally unsupported by the host seam's handle; the
-      // browser keeps its own fit and the PTY was sized at allocation.
+      if (message?.type === 'resize') {
+        // Tell the shell its real geometry, so it wraps and repaints at the
+        // panel's width instead of the 80x24 it was allocated with.
+        record.resize?.(message.cols, message.rows)
+      }
     })
 
     ws.on('close', () => {
@@ -366,6 +424,24 @@ export function apply(ctx, config) {
       }
     }
   }, 'native-terminal: routes and sessions')
+}
+
+/**
+ * A `(cols, rows)` resize function for one terminal handle, or null when this
+ * host build exposes no resizable pty.
+ */
+function resolveResize(handle) {
+  const pty = handle?.terminal
+  if (pty === undefined || pty === null || typeof pty.resize !== 'function') return null
+  return (cols, rows) => {
+    try {
+      pty.resize(clampDim(cols, 80), clampDim(rows, 24))
+      return true
+    } catch {
+      // The pty exited between the client's measurement and this call.
+      return false
+    }
+  }
 }
 
 function clampDim(value, fallback) {

@@ -264,9 +264,30 @@ function TerminalPane({ paneId, cwd, fontSize, focused, onFocus, onExit, registe
           socket.send(JSON.stringify({ type: 'data', data }))
         }
       })
+
+      // The PTY was allocated at the size measured before this socket existed.
+      // Announce the real grid once attached, then on every change below.
+      socket.addEventListener('open', () => sendResize(term.cols, term.rows))
+    }
+
+    /** Tell the host the shell's new geometry (deduplicated). */
+    let lastSize = ''
+    function sendResize(cols, rows) {
+      if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols < 2 || rows < 2) return
+      const key = `${cols}x${rows}`
+      if (key === lastSize) return
+      lastSize = key
+      const socket = socketRef.current
+      if (socket === null || socket.readyState !== WebSocket.OPEN) return
+      socket.send(JSON.stringify({ type: 'resize', cols, rows }))
     }
 
     void connect()
+
+    // Keep the shell's idea of the width in step with the rendered grid.
+    // Without this the shell wraps at its original 80 columns regardless of the
+    // panel size, which corrupts long lines and repainting prompts.
+    term.onResize(({ cols, rows }) => sendResize(cols, rows))
 
     const observer = new ResizeObserver(() => {
       try {
@@ -407,6 +428,15 @@ function SplitView({ node, path, onRatio, renderPane }) {
       </div>
     </div>
   )
+}
+
+/**
+ * Tooltip text combining an action name with its current shortcut, e.g.
+ * "Split right  (Ctrl+Shift+D)". The label comes from the parsed spec, so it
+ * always reflects the user's configured binding rather than a hardcoded string.
+ */
+function hint(label, spec) {
+  return spec && spec.label ? `${label}  (${spec.label})` : label
 }
 
 export function TerminalPanel({ cwd }) {
@@ -602,7 +632,11 @@ export function TerminalPanel({ cwd }) {
 
   const panel = (
     <div className="dshNtRoot" style={{ height }}>
-      <div className="dshNtResize" onPointerDown={startResize} />
+      <div
+        className="dshNtResize"
+        onPointerDown={startResize}
+        title="Drag to resize the terminal panel"
+      />
       <div className="dshNtBar">
         <div className="dshNtTabs">
           {tabs.map((tab, index) => (
@@ -613,7 +647,7 @@ export function TerminalPanel({ cwd }) {
                 setActiveTab(tab.id)
                 setFocusedPane(paneIds(tab.root)[0] ?? null)
               }}
-              title={`Terminal ${index + 1}`}
+              title={`Terminal ${index + 1}  (${hint('cycle panes', shortcuts.next)})`}
             >
               <span>{`Terminal ${index + 1}`}</span>
               {paneCount(tab.root) > 1 ? (
@@ -621,21 +655,66 @@ export function TerminalPanel({ cwd }) {
               ) : null}
             </button>
           ))}
-          <button className="dshNtIconBtn" onClick={addTab} title="New terminal">
+          <button
+            className="dshNtIconBtn"
+            onClick={addTab}
+            title={hint('New terminal', shortcuts.newTab)}
+            aria-label={hint('New terminal', shortcuts.newTab)}
+          >
             +
           </button>
         </div>
         <div className="dshNtActions">
-          <button className="dshNtIconBtn" onClick={() => doSplit('row')} title="Split right">
+          <div className="dshNtHelp" tabIndex={0} aria-label="Keyboard shortcuts">
+            ?
+            <div className="dshNtHelpCard" role="tooltip">
+              <div className="dshNtHelpTitle">Keyboard shortcuts</div>
+              {[
+                ['Toggle panel', shortcuts.toggle],
+                ['New terminal', shortcuts.newTab],
+                ['Split right', shortcuts.splitRight],
+                ['Split down', shortcuts.splitDown],
+                ['Close pane', shortcuts.close],
+                ['Next pane', shortcuts.next],
+                ['Previous pane', shortcuts.prev],
+              ].map(([label, spec]) => (
+                <div className="dshNtHelpRow" key={label}>
+                  <span>{label}</span>
+                  <kbd>{spec && spec.label ? spec.label : '—'}</kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            className="dshNtIconBtn"
+            onClick={() => doSplit('row')}
+            title={hint('Split right', shortcuts.splitRight)}
+            aria-label={hint('Split right', shortcuts.splitRight)}
+          >
             ▥
           </button>
-          <button className="dshNtIconBtn" onClick={() => doSplit('column')} title="Split down">
+          <button
+            className="dshNtIconBtn"
+            onClick={() => doSplit('column')}
+            title={hint('Split down', shortcuts.splitDown)}
+            aria-label={hint('Split down', shortcuts.splitDown)}
+          >
             ▤
           </button>
-          <button className="dshNtIconBtn" onClick={() => closePane(null)} title="Close pane">
+          <button
+            className="dshNtIconBtn"
+            onClick={() => closePane(null)}
+            title={hint('Close pane', shortcuts.close)}
+            aria-label={hint('Close pane', shortcuts.close)}
+          >
             ✕
           </button>
-          <button className="dshNtIconBtn" onClick={() => setOpen(false)} title="Hide panel">
+          <button
+            className="dshNtIconBtn"
+            onClick={() => setOpen(false)}
+            title={hint('Hide panel', shortcuts.toggle)}
+            aria-label={hint('Hide panel', shortcuts.toggle)}
+          >
             ▾
           </button>
         </div>
@@ -643,7 +722,11 @@ export function TerminalPanel({ cwd }) {
       <div className="dshNtBody">
         {activeTabObject === null ? (
           <div className="dshNtEmpty">
-            <button className="dshNtEmptyBtn" onClick={addTab}>
+            <button
+              className="dshNtEmptyBtn"
+              onClick={addTab}
+              title={hint('New terminal', shortcuts.newTab)}
+            >
               Open a terminal
             </button>
           </div>

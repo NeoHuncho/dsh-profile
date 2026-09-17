@@ -9929,8 +9929,20 @@ function TerminalPane({ paneId, cwd, fontSize, focused, onFocus, onExit, registe
           socket.send(JSON.stringify({ type: "data", data }));
         }
       });
+      socket.addEventListener("open", () => sendResize(term.cols, term.rows));
+    }
+    let lastSize = "";
+    function sendResize(cols, rows) {
+      if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols < 2 || rows < 2) return;
+      const key = `${cols}x${rows}`;
+      if (key === lastSize) return;
+      lastSize = key;
+      const socket = socketRef.current;
+      if (socket === null || socket.readyState !== WebSocket.OPEN) return;
+      socket.send(JSON.stringify({ type: "resize", cols, rows }));
     }
     void connect();
+    term.onResize(({ cols, rows }) => sendResize(cols, rows));
     const observer = new ResizeObserver(() => {
       try {
         fit.fit();
@@ -10040,6 +10052,9 @@ function SplitView({ node, path, onRatio, renderPane }) {
       ]
     }
   );
+}
+function hint(label, spec) {
+  return spec && spec.label ? `${label}  (${spec.label})` : label;
 }
 function TerminalPanel({ cwd }) {
   const [open, setOpen] = (0, import_react.useState)(false);
@@ -10202,7 +10217,14 @@ function TerminalPanel({ cwd }) {
   const seat = /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { ref: seatRef, style: { display: "none" } });
   if (!open || dockHost === null) return seat;
   const panel = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtRoot", style: { height }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshNtResize", onPointerDown: startResize }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      "div",
+      {
+        className: "dshNtResize",
+        onPointerDown: startResize,
+        title: "Drag to resize the terminal panel"
+      }
+    ),
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtBar", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtTabs", children: [
         tabs.map((tab, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
@@ -10213,7 +10235,7 @@ function TerminalPanel({ cwd }) {
               setActiveTab(tab.id);
               setFocusedPane(paneIds(tab.root)[0] ?? null);
             },
-            title: `Terminal ${index + 1}`,
+            title: `Terminal ${index + 1}  (${hint("cycle panes", shortcuts.next)})`,
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: `Terminal ${index + 1}` }),
               paneCount(tab.root) > 1 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshNtTabCount", children: paneCount(tab.root) }) : null
@@ -10221,16 +10243,87 @@ function TerminalPanel({ cwd }) {
           },
           tab.id
         )),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "dshNtIconBtn", onClick: addTab, title: "New terminal", children: "+" })
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "button",
+          {
+            className: "dshNtIconBtn",
+            onClick: addTab,
+            title: hint("New terminal", shortcuts.newTab),
+            "aria-label": hint("New terminal", shortcuts.newTab),
+            children: "+"
+          }
+        )
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtActions", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "dshNtIconBtn", onClick: () => doSplit("row"), title: "Split right", children: "\u25A5" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "dshNtIconBtn", onClick: () => doSplit("column"), title: "Split down", children: "\u25A4" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "dshNtIconBtn", onClick: () => closePane(null), title: "Close pane", children: "\u2715" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "dshNtIconBtn", onClick: () => setOpen(false), title: "Hide panel", children: "\u25BE" })
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtHelp", tabIndex: 0, "aria-label": "Keyboard shortcuts", children: [
+          "?",
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtHelpCard", role: "tooltip", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshNtHelpTitle", children: "Keyboard shortcuts" }),
+            [
+              ["Toggle panel", shortcuts.toggle],
+              ["New terminal", shortcuts.newTab],
+              ["Split right", shortcuts.splitRight],
+              ["Split down", shortcuts.splitDown],
+              ["Close pane", shortcuts.close],
+              ["Next pane", shortcuts.next],
+              ["Previous pane", shortcuts.prev]
+            ].map(([label, spec]) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtHelpRow", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: label }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("kbd", { children: spec && spec.label ? spec.label : "\u2014" })
+            ] }, label))
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "button",
+          {
+            className: "dshNtIconBtn",
+            onClick: () => doSplit("row"),
+            title: hint("Split right", shortcuts.splitRight),
+            "aria-label": hint("Split right", shortcuts.splitRight),
+            children: "\u25A5"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "button",
+          {
+            className: "dshNtIconBtn",
+            onClick: () => doSplit("column"),
+            title: hint("Split down", shortcuts.splitDown),
+            "aria-label": hint("Split down", shortcuts.splitDown),
+            children: "\u25A4"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "button",
+          {
+            className: "dshNtIconBtn",
+            onClick: () => closePane(null),
+            title: hint("Close pane", shortcuts.close),
+            "aria-label": hint("Close pane", shortcuts.close),
+            children: "\u2715"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "button",
+          {
+            className: "dshNtIconBtn",
+            onClick: () => setOpen(false),
+            title: hint("Hide panel", shortcuts.toggle),
+            "aria-label": hint("Hide panel", shortcuts.toggle),
+            children: "\u25BE"
+          }
+        )
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshNtBody", children: activeTabObject === null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshNtEmpty", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "dshNtEmptyBtn", onClick: addTab, children: "Open a terminal" }) }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshNtBody", children: activeTabObject === null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshNtEmpty", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      "button",
+      {
+        className: "dshNtEmptyBtn",
+        onClick: addTab,
+        title: hint("New terminal", shortcuts.newTab),
+        children: "Open a terminal"
+      }
+    ) }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
       LayoutView,
       {
         node: activeTabObject.root,
@@ -10391,7 +10484,7 @@ function BoltIcon() {
 }
 
 // raw-css:/Users/williamguinaudie/.dsh/profiles/web/packages/dsh-native-terminal/src/panel.css
-var panel_default = "/*\n * The dock is portalled in as the LAST flex child of the conversation column,\n * so `flex: none` plus an explicit height makes the transcript above it shrink:\n * the chat is pushed up rather than covered. Staying `relative` (not `fixed`)\n * is what keeps it in flow.\n */\n.dshNtRoot {\n  position: relative;\n  z-index: 1;\n  display: flex;\n  flex: none;\n  flex-direction: column;\n  width: 100%;\n  min-height: 120px;\n  background: var(--dsw-alias-bg-l1, #1e1e1e);\n  border-top: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.22));\n  font-family: var(--dsw-font-family, system-ui, sans-serif);\n}\n\n.dshNtResize {\n  position: absolute;\n  top: -3px;\n  left: 0;\n  right: 0;\n  height: 6px;\n  cursor: ns-resize;\n  z-index: 2;\n}\n.dshNtResize:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.25));\n}\n\n.dshNtBar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  padding: 4px 8px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.2));\n  flex: none;\n}\n\n.dshNtTabs,\n.dshNtActions {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  min-width: 0;\n}\n.dshNtTabs {\n  overflow-x: auto;\n  scrollbar-width: none;\n}\n.dshNtTabs::-webkit-scrollbar {\n  display: none;\n}\n\n.dshNtTab {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  height: 26px;\n  padding: 0 10px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 12px;\n  white-space: nowrap;\n  cursor: pointer;\n}\n.dshNtTab:hover {\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.15));\n}\n.dshNtTabActive {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.22));\n}\n.dshNtTabCount {\n  font-size: 10px;\n  padding: 0 5px;\n  border-radius: 999px;\n  background: var(--dsw-alias-fill-l3, rgba(128, 128, 128, 0.3));\n}\n\n.dshNtIconBtn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n}\n.dshNtIconBtn:hover {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n.dshNtBody {\n  flex: 1;\n  min-height: 0;\n  display: flex;\n}\n\n.dshNtSplit {\n  display: flex;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n}\n.dshNtSplitHalf {\n  display: flex;\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.dshNtHandle {\n  flex: none;\n  background: var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.25));\n}\n.dshNtHandleV {\n  width: 3px;\n  cursor: col-resize;\n}\n.dshNtHandleH {\n  height: 3px;\n  cursor: row-resize;\n}\n.dshNtHandle:hover {\n  background: var(--dsw-alias-label-tertiary, #9aa0a6);\n}\n\n.dshNtPane {\n  position: relative;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n  padding: 6px 4px 6px 10px;\n  box-sizing: border-box;\n  overflow: hidden;\n}\n\n/*\n * Only mark the focused pane when the tab is actually split. A lone pane with a\n * box drawn round it reads as a widget rather than a terminal.\n */\n.dshNtSplit .dshNtPaneFocused::after {\n  content: '';\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  border: 1px solid var(--dsw-alias-label-tertiary, rgba(154, 160, 166, 0.5));\n  border-radius: 4px;\n}\n.dshNtPaneBody {\n  width: 100%;\n  height: 100%;\n}\n\n.dshNtEmpty {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n.dshNtEmptyBtn {\n  padding: 8px 16px;\n  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.3));\n  border-radius: 8px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  font-size: 13px;\n  cursor: pointer;\n}\n.dshNtEmptyBtn:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n/*\n * Terminal surface.\n *\n * xterm draws its own text layer; these rules only remove the chrome that made\n * the panel read as a web widget rather than a terminal. The scrollbar is\n * styled to match the app instead of showing the platform default inside an\n * otherwise dark surface.\n */\n.dshNtPaneBody .xterm {\n  height: 100%;\n  padding: 0;\n}\n.dshNtPaneBody .xterm-viewport {\n  background: transparent !important;\n  scrollbar-width: thin;\n  scrollbar-color: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35)) transparent;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar {\n  width: 9px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-thumb {\n  background: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35));\n  border-radius: 999px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-track {\n  background: transparent;\n}\n/* The focus outline belongs to the pane, not to xterm's inner textarea. */\n.dshNtPaneBody .xterm:focus,\n.dshNtPaneBody .xterm textarea:focus {\n  outline: none;\n}\n";
+var panel_default = "/*\n * The dock is portalled in as the LAST flex child of the conversation column,\n * so `flex: none` plus an explicit height makes the transcript above it shrink:\n * the chat is pushed up rather than covered. Staying `relative` (not `fixed`)\n * is what keeps it in flow.\n */\n.dshNtRoot {\n  position: relative;\n  z-index: 1;\n  display: flex;\n  flex: none;\n  flex-direction: column;\n  width: 100%;\n  min-height: 120px;\n  background: var(--dsw-alias-bg-l1, #1e1e1e);\n  border-top: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.22));\n  font-family: var(--dsw-font-family, system-ui, sans-serif);\n}\n\n.dshNtResize {\n  position: absolute;\n  top: -3px;\n  left: 0;\n  right: 0;\n  height: 6px;\n  cursor: ns-resize;\n  z-index: 2;\n}\n.dshNtResize:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.25));\n}\n\n.dshNtBar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  padding: 4px 8px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.2));\n  flex: none;\n}\n\n.dshNtTabs,\n.dshNtActions {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  min-width: 0;\n}\n.dshNtTabs {\n  overflow-x: auto;\n  scrollbar-width: none;\n}\n.dshNtTabs::-webkit-scrollbar {\n  display: none;\n}\n\n.dshNtTab {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  height: 26px;\n  padding: 0 10px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 12px;\n  white-space: nowrap;\n  cursor: pointer;\n}\n.dshNtTab:hover {\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.15));\n}\n.dshNtTabActive {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.22));\n}\n.dshNtTabCount {\n  font-size: 10px;\n  padding: 0 5px;\n  border-radius: 999px;\n  background: var(--dsw-alias-fill-l3, rgba(128, 128, 128, 0.3));\n}\n\n.dshNtIconBtn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n}\n.dshNtIconBtn:hover {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n.dshNtBody {\n  flex: 1;\n  min-height: 0;\n  display: flex;\n}\n\n.dshNtSplit {\n  display: flex;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n}\n.dshNtSplitHalf {\n  display: flex;\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.dshNtHandle {\n  flex: none;\n  background: var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.25));\n}\n.dshNtHandleV {\n  width: 3px;\n  cursor: col-resize;\n}\n.dshNtHandleH {\n  height: 3px;\n  cursor: row-resize;\n}\n.dshNtHandle:hover {\n  background: var(--dsw-alias-label-tertiary, #9aa0a6);\n}\n\n.dshNtPane {\n  position: relative;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n  padding: 6px 4px 6px 10px;\n  box-sizing: border-box;\n  overflow: hidden;\n}\n\n/*\n * Only mark the focused pane when the tab is actually split. A lone pane with a\n * box drawn round it reads as a widget rather than a terminal.\n */\n.dshNtSplit .dshNtPaneFocused::after {\n  content: '';\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  border: 1px solid var(--dsw-alias-label-tertiary, rgba(154, 160, 166, 0.5));\n  border-radius: 4px;\n}\n.dshNtPaneBody {\n  width: 100%;\n  height: 100%;\n}\n\n.dshNtEmpty {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n.dshNtEmptyBtn {\n  padding: 8px 16px;\n  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.3));\n  border-radius: 8px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  font-size: 13px;\n  cursor: pointer;\n}\n.dshNtEmptyBtn:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n/*\n * Terminal surface.\n *\n * xterm draws its own text layer; these rules only remove the chrome that made\n * the panel read as a web widget rather than a terminal. The scrollbar is\n * styled to match the app instead of showing the platform default inside an\n * otherwise dark surface.\n */\n.dshNtPaneBody .xterm {\n  height: 100%;\n  padding: 0;\n}\n.dshNtPaneBody .xterm-viewport {\n  background: transparent !important;\n  scrollbar-width: thin;\n  scrollbar-color: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35)) transparent;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar {\n  width: 9px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-thumb {\n  background: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35));\n  border-radius: 999px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-track {\n  background: transparent;\n}\n/* The focus outline belongs to the pane, not to xterm's inner textarea. */\n.dshNtPaneBody .xterm:focus,\n.dshNtPaneBody .xterm textarea:focus {\n  outline: none;\n}\n\n/* Shortcut legend: a hover/focus card listing the current bindings. */\n.dshNtHelp {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  border-radius: 6px;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 12px;\n  cursor: default;\n  user-select: none;\n}\n.dshNtHelp:hover,\n.dshNtHelp:focus-visible {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n  outline: none;\n}\n.dshNtHelpCard {\n  position: absolute;\n  right: 0;\n  bottom: calc(100% + 6px);\n  z-index: 30;\n  display: none;\n  min-width: 210px;\n  padding: 8px 10px;\n  border-radius: 10px;\n  background: var(--dsw-specific-menu, #2a2a2a);\n  box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0, 0, 0, 0.35));\n  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.25));\n}\n.dshNtHelp:hover .dshNtHelpCard,\n.dshNtHelp:focus-visible .dshNtHelpCard,\n.dshNtHelp:focus-within .dshNtHelpCard {\n  display: block;\n}\n.dshNtHelpTitle {\n  margin-bottom: 6px;\n  font-size: 11px;\n  font-weight: 600;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n}\n.dshNtHelpRow {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  padding: 2px 0;\n  font-size: 12px;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  white-space: nowrap;\n}\n.dshNtHelpRow kbd {\n  padding: 1px 6px;\n  border-radius: 5px;\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.22));\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  font-family: var(--dsw-font-mono, ui-monospace, monospace);\n  font-size: 11px;\n}\n";
 
 // raw-css:/Users/williamguinaudie/.dsh/profiles/web/packages/dsh-native-terminal/src/quickchats.css
 var quickchats_default = ".dshQcRoot {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  width: 100%;\n  padding: 2px 0 6px;\n}\n\n.dshQcHeader {\n  display: flex;\n  align-items: center;\n  gap: 2px;\n  width: 100%;\n}\n\n.dshQcHeaderBtn {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  flex: 1;\n  min-width: 0;\n  height: 26px;\n  padding: 0 4px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 11px;\n  font-weight: 500;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n.dshQcHeaderBtn:hover {\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n}\n\n.dshQcChevron {\n  display: inline-block;\n  transition: transform 0.12s ease;\n  font-size: 13px;\n  line-height: 1;\n}\n.dshQcChevronOpen {\n  transform: rotate(90deg);\n}\n\n.dshQcTitle {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.dshQcNewBtn,\n.dshQcRailBtn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 24px;\n  height: 24px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 14px;\n  line-height: 1;\n  cursor: pointer;\n  flex: none;\n}\n.dshQcNewBtn:hover,\n.dshQcRailBtn:hover {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n.dshQcNewBtn:disabled {\n  opacity: 0.5;\n  cursor: default;\n}\n\n.dshQcList {\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n}\n\n.dshQcItem {\n  display: block;\n  width: 100%;\n  min-height: 26px;\n  padding: 4px 8px 4px 20px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  font-size: 12px;\n  text-align: left;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  cursor: pointer;\n}\n.dshQcItem:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.18));\n  color: var(--dsw-alias-label-primary, #e8eaed);\n}\n\n.dshQcEmpty {\n  padding: 4px 8px 4px 20px;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  opacity: 0.7;\n}\n\n.dshQcError {\n  padding: 4px 8px 4px 20px;\n  font-size: 11px;\n  color: #e5534b;\n}\n";
@@ -10419,7 +10512,12 @@ function apply(ctx) {
     () => ctx.slots.register(
       { name: "conversation.input.dock", id: "native-terminal", order: 100 },
       (props) => {
-        const cwd = props?.useSession?.((s15) => s15?.header?.cwd) ?? void 0;
+        const sessionId = props?.sessionId;
+        const cwd = props?.useSessions?.((store) => {
+          const id = sessionId ?? store?.current;
+          if (id === void 0 || id === null) return void 0;
+          return store?.byId?.[id]?.cwd;
+        }) ?? void 0;
         return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(TerminalPanel, { cwd });
       }
     )

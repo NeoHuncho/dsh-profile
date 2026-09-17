@@ -44,9 +44,20 @@ export function apply(ctx) {
     ctx.slots.register(
       { name: 'conversation.input.dock', id: 'native-terminal', order: 100 },
       (props) => {
-        // Run the panel in the workspace directory of the open session when we
-        // can see one, so a new terminal starts where the user is working.
-        const cwd = props?.useSession?.((s) => s?.header?.cwd) ?? undefined
+        // Start terminals in the current workspace directory.
+        //
+        // The cwd is NOT on the session snapshot — that snapshot carries only
+        // run state (running/blank/queue/…) and has no `header` at all, which
+        // is why reading `header.cwd` always yielded undefined and the host
+        // fell back to the home directory. The sessions store is what holds it,
+        // keyed by session id.
+        const sessionId = props?.sessionId
+        const cwd =
+          props?.useSessions?.((store) => {
+            const id = sessionId ?? store?.current
+            if (id === undefined || id === null) return undefined
+            return store?.byId?.[id]?.cwd
+          }) ?? undefined
         return <TerminalPanel cwd={cwd} />
       },
     ),
