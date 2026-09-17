@@ -172,6 +172,7 @@ var import_react3 = __toESM(require("react"), 1);
 
 // src/client-panel.jsx
 var import_react = __toESM(require("react"), 1);
+var import_react_dom = require("react-dom");
 
 // ../../node_modules/@xterm/xterm/lib/xterm.mjs
 var zs = Object.defineProperty;
@@ -9757,18 +9758,86 @@ if (typeof document !== "undefined" && document.getElementById(XTERM_STYLE_ID) =
 }
 var paneSeq = 0;
 var nextPaneId = () => `pane-${++paneSeq}`;
+function findDockHost(from) {
+  let el2 = from;
+  let best = null;
+  for (let i = 0; i < 14 && el2 !== null && el2 !== document.body; i++) {
+    const style = window.getComputedStyle(el2);
+    if (style.display === "flex" && style.flexDirection === "column") {
+      const rect = el2.getBoundingClientRect();
+      if (rect.height >= window.innerHeight - 4 && rect.width > 200) best = el2;
+    }
+    el2 = el2.parentElement;
+  }
+  return best;
+}
+function isDarkTheme() {
+  if (typeof window === "undefined") return true;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--dsw-alias-bg-l1").trim();
+  const rgb = /rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(bg);
+  if (rgb !== null) {
+    const luma = (Number(rgb[1]) * 299 + Number(rgb[2]) * 587 + Number(rgb[3]) * 114) / 1e3;
+    return luma < 128;
+  }
+  const hex = /^#([0-9a-f]{6})$/i.exec(bg);
+  if (hex !== null) {
+    const n = parseInt(hex[1], 16);
+    const luma = ((n >> 16 & 255) * 299 + (n >> 8 & 255) * 587 + (n & 255) * 114) / 1e3;
+    return luma < 128;
+  }
+  return !window.matchMedia?.("(prefers-color-scheme: light)").matches;
+}
 function readTheme() {
-  if (typeof window === "undefined") return {};
-  const styles = getComputedStyle(document.documentElement);
-  const pick = (name, fallback) => {
-    const value = styles.getPropertyValue(name).trim();
-    return value.length > 0 ? value : fallback;
-  };
+  const dark = isDarkTheme();
+  const surface = getComputedStyle(document.documentElement).getPropertyValue("--dsw-alias-bg-l1").trim();
+  if (dark) {
+    return {
+      background: surface.length > 0 ? surface : "#1e1e1e",
+      foreground: "#cccccc",
+      cursor: "#cccccc",
+      cursorAccent: "#1e1e1e",
+      selectionBackground: "rgba(120, 150, 200, 0.35)",
+      black: "#000000",
+      red: "#cd3131",
+      green: "#0dbc79",
+      yellow: "#e5e510",
+      blue: "#2472c8",
+      magenta: "#bc3fbc",
+      cyan: "#11a8cd",
+      white: "#e5e5e5",
+      // Bright black is the autosuggestion colour: visible, clearly dimmer.
+      brightBlack: "#6a7076",
+      brightRed: "#f14c4c",
+      brightGreen: "#23d18b",
+      brightYellow: "#f5f543",
+      brightBlue: "#3b8eea",
+      brightMagenta: "#d670d6",
+      brightCyan: "#29b8db",
+      brightWhite: "#ffffff"
+    };
+  }
   return {
-    background: pick("--dsw-alias-bg-l1", "#1e1e1e"),
-    foreground: pick("--dsw-alias-label-primary", "#d4d4d4"),
-    cursor: pick("--dsw-alias-label-primary", "#d4d4d4"),
-    selectionBackground: pick("--dsw-alias-fill-l2", "rgba(255,255,255,0.25)")
+    background: surface.length > 0 ? surface : "#ffffff",
+    foreground: "#333333",
+    cursor: "#333333",
+    cursorAccent: "#ffffff",
+    selectionBackground: "rgba(80, 130, 200, 0.28)",
+    black: "#000000",
+    red: "#cd3131",
+    green: "#12813e",
+    yellow: "#949800",
+    blue: "#0451a5",
+    magenta: "#bc05bc",
+    cyan: "#0598bc",
+    white: "#555555",
+    brightBlack: "#8b9096",
+    brightRed: "#cd3131",
+    brightGreen: "#14ce5c",
+    brightYellow: "#b5ba00",
+    brightBlue: "#0451a5",
+    brightMagenta: "#bc05bc",
+    brightCyan: "#0598bc",
+    brightWhite: "#a5a5a5"
   };
 }
 function TerminalPane({ paneId, cwd, fontSize, focused, onFocus, onExit, registerFocuser }) {
@@ -9783,9 +9852,19 @@ function TerminalPane({ paneId, cwd, fontSize, focused, onFocus, onExit, registe
     let disposed = false;
     const term = new Dl({
       fontSize,
-      fontFamily: 'var(--dsw-font-mono), Menlo, Monaco, "Cascadia Mono", "Courier New", monospace',
+      // A literal stack, NOT a CSS var(): xterm measures the font from this
+      // string in canvas, where `var(...)` never resolves and silently falls
+      // back to a proportional font — which misaligns every column.
+      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Mono", "Roboto Mono", "Courier New", monospace',
+      fontWeight: 400,
+      fontWeightBold: 600,
+      lineHeight: 1.2,
+      letterSpacing: 0,
       cursorBlink: true,
+      cursorStyle: "bar",
       allowProposedApi: true,
+      drawBoldTextInBrightColors: false,
+      minimumContrastRatio: 1,
       scrollback: 1e4,
       theme: readTheme()
     });
@@ -9882,6 +9961,17 @@ function TerminalPane({ paneId, cwd, fontSize, focused, onFocus, onExit, registe
     }
   }, [fontSize]);
   (0, import_react.useEffect)(() => {
+    const observer = new MutationObserver(() => {
+      const term = termRef.current;
+      if (term !== null) term.options.theme = readTheme();
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme", "style"]
+    });
+    return () => observer.disconnect();
+  }, []);
+  (0, import_react.useEffect)(() => {
     registerFocuser?.(paneId, () => {
       try {
         termRef.current?.focus();
@@ -9957,10 +10047,15 @@ function TerminalPanel({ cwd }) {
   const [activeTab, setActiveTab] = (0, import_react.useState)(null);
   const [focusedPane, setFocusedPane] = (0, import_react.useState)(null);
   const [settings, setSettings] = (0, import_react.useState)(null);
+  const [dockHost, setDockHost] = (0, import_react.useState)(null);
+  const seatRef = (0, import_react.useRef)(null);
   const [height, setHeight] = (0, import_react.useState)(() => {
     const stored = Number(window.localStorage.getItem(HEIGHT_KEY));
     return Number.isFinite(stored) && stored >= MIN_HEIGHT ? stored : 280;
   });
+  (0, import_react.useEffect)(() => {
+    setDockHost(findDockHost(seatRef.current));
+  }, []);
   const focusers = (0, import_react.useRef)(/* @__PURE__ */ new Map());
   const registerFocuser = (0, import_react.useCallback)((paneId, fn2) => {
     if (fn2 === null) focusers.current.delete(paneId);
@@ -10104,8 +10199,9 @@ function TerminalPanel({ cwd }) {
     document.addEventListener("pointermove", move);
     document.addEventListener("pointerup", up);
   };
-  if (!open) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtRoot", style: { height }, children: [
+  const seat = /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { ref: seatRef, style: { display: "none" } });
+  if (!open || dockHost === null) return seat;
+  const panel = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtRoot", style: { height }, children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshNtResize", onPointerDown: startResize }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtBar", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshNtTabs", children: [
@@ -10156,6 +10252,10 @@ function TerminalPanel({ cwd }) {
       }
     ) })
   ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+    seat,
+    (0, import_react_dom.createPortal)(panel, dockHost)
+  ] });
 }
 
 // src/client-quickchats.jsx
@@ -10163,49 +10263,54 @@ var import_react2 = __toESM(require("react"), 1);
 var import_jsx_runtime2 = require("react/jsx-runtime");
 var QUICK_TITLE = "Quick chats";
 var STORE_KEY = "dsh-native-terminal.quick-workspace";
-async function resolveQuickWorkspace(workspaces, snapshot) {
-  const remembered = window.localStorage.getItem(STORE_KEY);
-  const existing = snapshot.find(
-    (w) => w.id === remembered || w.title === QUICK_TITLE
-  );
-  if (existing !== void 0) {
-    window.localStorage.setItem(STORE_KEY, existing.id);
-    return existing.id;
-  }
-  const created = await workspaces.create({ path: "~" });
-  try {
-    await workspaces.rename(created.id, QUICK_TITLE);
-  } catch {
-  }
-  window.localStorage.setItem(STORE_KEY, created.id);
-  return created.id;
+function readWorkspace(entry) {
+  if (entry === null || typeof entry !== "object") return null;
+  const id = entry.workspaceId ?? entry.id;
+  if (id === void 0) return null;
+  const sessions = Array.isArray(entry.sessions) ? entry.sessions : (entry.sessionIds ?? []).map((sid) => ({ id: sid, title: void 0 }));
+  return { id, title: entry.title, path: entry.path, sessions };
 }
 function createQuickChatsAction(services) {
   return function QuickChatsAction(props) {
     const { wide } = props;
-    const workspacesSnapshot = props.useWorkspaces?.((s15) => s15) ?? [];
+    const snapshot = props.useWorkspaces?.((s15) => s15) ?? [];
     const [busy, setBusy] = (0, import_react2.useState)(false);
     const [expanded, setExpanded] = (0, import_react2.useState)(true);
     const [error, setError] = (0, import_react2.useState)(null);
-    const list = Array.isArray(workspacesSnapshot) ? workspacesSnapshot : workspacesSnapshot?.workspaces ?? [];
+    const raw = Array.isArray(snapshot) ? snapshot : snapshot?.workspaces ?? [];
+    const list = raw.map(readWorkspace).filter((w) => w !== null);
     const quick = list.find((w) => w.title === QUICK_TITLE) ?? null;
     const sessions = quick?.sessions ?? [];
     const openNew = (0, import_react2.useCallback)(async () => {
       setBusy(true);
       setError(null);
       try {
-        const { workspaces, uiWorkspace: ui2 } = services;
+        const workspaces = services.workspaces;
+        const ui2 = services.uiWorkspace;
         if (workspaces === void 0 || ui2 === void 0) {
           throw new Error("workspace services unavailable");
         }
-        const id = await resolveQuickWorkspace(workspaces, list);
+        let id = quick?.id ?? window.localStorage.getItem(STORE_KEY) ?? null;
+        if (id !== null && list.every((w) => w.id !== id)) id = null;
+        if (id === null) {
+          const home = await resolveHome(services);
+          const created = await workspaces.create({ path: home });
+          id = created.workspaceId ?? created.id;
+          if (created.title !== QUICK_TITLE) {
+            try {
+              await workspaces.rename(id, QUICK_TITLE);
+            } catch {
+            }
+          }
+          window.localStorage.setItem(STORE_KEY, id);
+        }
         ui2.startSession(id);
       } catch (err) {
         setError(String(err?.message ?? err));
       } finally {
         setBusy(false);
       }
-    }, [list]);
+    }, [quick, list]);
     const openSession = (0, import_react2.useCallback)((sessionId) => {
       services.uiWorkspace?.openSession(sessionId);
     }, []);
@@ -10218,7 +10323,7 @@ function createQuickChatsAction(services) {
           disabled: busy,
           title: QUICK_TITLE,
           "aria-label": QUICK_TITLE,
-          children: "\u26A1"
+          children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(BoltIcon, {})
         }
       );
     }
@@ -10264,9 +10369,29 @@ function createQuickChatsAction(services) {
     ] });
   };
 }
+async function resolveHome(services) {
+  const ui2 = services.uiWorkspace;
+  const listing = await ui2.listDirectory();
+  const direct = listing?.path ?? listing?.cwd ?? listing?.current;
+  if (typeof direct === "string" && direct.length > 0) return direct;
+  const crumbs = listing?.breadcrumbs ?? listing?.ancestors ?? [];
+  const last = crumbs[crumbs.length - 1];
+  const fromCrumb = typeof last === "string" ? last : last?.path;
+  if (typeof fromCrumb === "string" && fromCrumb.length > 0) return fromCrumb;
+  throw new Error("could not resolve the home directory");
+}
+function BoltIcon() {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "15", height: "15", viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    "path",
+    {
+      d: "M8.8 1.5 3.6 9.1h3.3l-.7 5.4 5.2-7.6H8.1l.7-5.4Z",
+      fill: "currentColor"
+    }
+  ) });
+}
 
 // raw-css:/Users/williamguinaudie/.dsh/profiles/web/packages/dsh-native-terminal/src/panel.css
-var panel_default = ".dshNtRoot {\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  width: 100%;\n  min-height: 120px;\n  background: var(--dsw-alias-bg-l1, #1e1e1e);\n  border-top: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.3));\n  font-family: Inter, var(--dsw-font-family, system-ui, sans-serif);\n}\n\n.dshNtResize {\n  position: absolute;\n  top: -3px;\n  left: 0;\n  right: 0;\n  height: 6px;\n  cursor: ns-resize;\n  z-index: 2;\n}\n.dshNtResize:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.25));\n}\n\n.dshNtBar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  padding: 4px 8px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.2));\n  flex: none;\n}\n\n.dshNtTabs,\n.dshNtActions {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  min-width: 0;\n}\n.dshNtTabs {\n  overflow-x: auto;\n  scrollbar-width: none;\n}\n.dshNtTabs::-webkit-scrollbar {\n  display: none;\n}\n\n.dshNtTab {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  height: 26px;\n  padding: 0 10px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 12px;\n  white-space: nowrap;\n  cursor: pointer;\n}\n.dshNtTab:hover {\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.15));\n}\n.dshNtTabActive {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.22));\n}\n.dshNtTabCount {\n  font-size: 10px;\n  padding: 0 5px;\n  border-radius: 999px;\n  background: var(--dsw-alias-fill-l3, rgba(128, 128, 128, 0.3));\n}\n\n.dshNtIconBtn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n}\n.dshNtIconBtn:hover {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n.dshNtBody {\n  flex: 1;\n  min-height: 0;\n  display: flex;\n}\n\n.dshNtSplit {\n  display: flex;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n}\n.dshNtSplitHalf {\n  display: flex;\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.dshNtHandle {\n  flex: none;\n  background: var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.25));\n}\n.dshNtHandleV {\n  width: 3px;\n  cursor: col-resize;\n}\n.dshNtHandleH {\n  height: 3px;\n  cursor: row-resize;\n}\n.dshNtHandle:hover {\n  background: var(--dsw-alias-label-tertiary, #9aa0a6);\n}\n\n.dshNtPane {\n  position: relative;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n  padding: 4px 6px;\n  box-sizing: border-box;\n  overflow: hidden;\n}\n.dshNtPaneFocused::after {\n  content: '';\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  border: 1px solid var(--dsw-alias-label-tertiary, rgba(154, 160, 166, 0.5));\n  border-radius: 4px;\n}\n.dshNtPaneBody {\n  width: 100%;\n  height: 100%;\n}\n\n.dshNtEmpty {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n.dshNtEmptyBtn {\n  padding: 8px 16px;\n  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.3));\n  border-radius: 8px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  font-size: 13px;\n  cursor: pointer;\n}\n.dshNtEmptyBtn:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n";
+var panel_default = "/*\n * The dock is portalled in as the LAST flex child of the conversation column,\n * so `flex: none` plus an explicit height makes the transcript above it shrink:\n * the chat is pushed up rather than covered. Staying `relative` (not `fixed`)\n * is what keeps it in flow.\n */\n.dshNtRoot {\n  position: relative;\n  z-index: 1;\n  display: flex;\n  flex: none;\n  flex-direction: column;\n  width: 100%;\n  min-height: 120px;\n  background: var(--dsw-alias-bg-l1, #1e1e1e);\n  border-top: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.22));\n  font-family: var(--dsw-font-family, system-ui, sans-serif);\n}\n\n.dshNtResize {\n  position: absolute;\n  top: -3px;\n  left: 0;\n  right: 0;\n  height: 6px;\n  cursor: ns-resize;\n  z-index: 2;\n}\n.dshNtResize:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.25));\n}\n\n.dshNtBar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  padding: 4px 8px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.2));\n  flex: none;\n}\n\n.dshNtTabs,\n.dshNtActions {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  min-width: 0;\n}\n.dshNtTabs {\n  overflow-x: auto;\n  scrollbar-width: none;\n}\n.dshNtTabs::-webkit-scrollbar {\n  display: none;\n}\n\n.dshNtTab {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  height: 26px;\n  padding: 0 10px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 12px;\n  white-space: nowrap;\n  cursor: pointer;\n}\n.dshNtTab:hover {\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.15));\n}\n.dshNtTabActive {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.22));\n}\n.dshNtTabCount {\n  font-size: 10px;\n  padding: 0 5px;\n  border-radius: 999px;\n  background: var(--dsw-alias-fill-l3, rgba(128, 128, 128, 0.3));\n}\n\n.dshNtIconBtn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n}\n.dshNtIconBtn:hover {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n.dshNtBody {\n  flex: 1;\n  min-height: 0;\n  display: flex;\n}\n\n.dshNtSplit {\n  display: flex;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n}\n.dshNtSplitHalf {\n  display: flex;\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.dshNtHandle {\n  flex: none;\n  background: var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.25));\n}\n.dshNtHandleV {\n  width: 3px;\n  cursor: col-resize;\n}\n.dshNtHandleH {\n  height: 3px;\n  cursor: row-resize;\n}\n.dshNtHandle:hover {\n  background: var(--dsw-alias-label-tertiary, #9aa0a6);\n}\n\n.dshNtPane {\n  position: relative;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n  padding: 6px 4px 6px 10px;\n  box-sizing: border-box;\n  overflow: hidden;\n}\n\n/*\n * Only mark the focused pane when the tab is actually split. A lone pane with a\n * box drawn round it reads as a widget rather than a terminal.\n */\n.dshNtSplit .dshNtPaneFocused::after {\n  content: '';\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  border: 1px solid var(--dsw-alias-label-tertiary, rgba(154, 160, 166, 0.5));\n  border-radius: 4px;\n}\n.dshNtPaneBody {\n  width: 100%;\n  height: 100%;\n}\n\n.dshNtEmpty {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n.dshNtEmptyBtn {\n  padding: 8px 16px;\n  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.3));\n  border-radius: 8px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  font-size: 13px;\n  cursor: pointer;\n}\n.dshNtEmptyBtn:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n/*\n * Terminal surface.\n *\n * xterm draws its own text layer; these rules only remove the chrome that made\n * the panel read as a web widget rather than a terminal. The scrollbar is\n * styled to match the app instead of showing the platform default inside an\n * otherwise dark surface.\n */\n.dshNtPaneBody .xterm {\n  height: 100%;\n  padding: 0;\n}\n.dshNtPaneBody .xterm-viewport {\n  background: transparent !important;\n  scrollbar-width: thin;\n  scrollbar-color: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35)) transparent;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar {\n  width: 9px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-thumb {\n  background: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35));\n  border-radius: 999px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-track {\n  background: transparent;\n}\n/* The focus outline belongs to the pane, not to xterm's inner textarea. */\n.dshNtPaneBody .xterm:focus,\n.dshNtPaneBody .xterm textarea:focus {\n  outline: none;\n}\n";
 
 // raw-css:/Users/williamguinaudie/.dsh/profiles/web/packages/dsh-native-terminal/src/quickchats.css
 var quickchats_default = ".dshQcRoot {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  width: 100%;\n  padding: 2px 0 6px;\n}\n\n.dshQcHeader {\n  display: flex;\n  align-items: center;\n  gap: 2px;\n  width: 100%;\n}\n\n.dshQcHeaderBtn {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  flex: 1;\n  min-width: 0;\n  height: 26px;\n  padding: 0 4px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 11px;\n  font-weight: 500;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n.dshQcHeaderBtn:hover {\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n}\n\n.dshQcChevron {\n  display: inline-block;\n  transition: transform 0.12s ease;\n  font-size: 13px;\n  line-height: 1;\n}\n.dshQcChevronOpen {\n  transform: rotate(90deg);\n}\n\n.dshQcTitle {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.dshQcNewBtn,\n.dshQcRailBtn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 24px;\n  height: 24px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 14px;\n  line-height: 1;\n  cursor: pointer;\n  flex: none;\n}\n.dshQcNewBtn:hover,\n.dshQcRailBtn:hover {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n.dshQcNewBtn:disabled {\n  opacity: 0.5;\n  cursor: default;\n}\n\n.dshQcList {\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n}\n\n.dshQcItem {\n  display: block;\n  width: 100%;\n  min-height: 26px;\n  padding: 4px 8px 4px 20px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  font-size: 12px;\n  text-align: left;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  cursor: pointer;\n}\n.dshQcItem:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.18));\n  color: var(--dsw-alias-label-primary, #e8eaed);\n}\n\n.dshQcEmpty {\n  padding: 4px 8px 4px 20px;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  opacity: 0.7;\n}\n\n.dshQcError {\n  padding: 4px 8px 4px 20px;\n  font-size: 11px;\n  color: #e5534b;\n}\n";
@@ -10299,11 +10424,14 @@ function apply(ctx) {
       }
     )
   );
-  const services = {
-    workspaces: ctx.get("workspaces"),
-    uiWorkspace: ctx.get("uiWorkspace")
-  };
-  const QuickChats = createQuickChatsAction(services);
+  const QuickChats = createQuickChatsAction({
+    get workspaces() {
+      return ctx.get("workspaces");
+    },
+    get uiWorkspace() {
+      return ctx.get("uiWorkspace");
+    }
+  });
   ctx.slots.inject(
     "sidebar.footer.action",
     () => ctx.slots.register(

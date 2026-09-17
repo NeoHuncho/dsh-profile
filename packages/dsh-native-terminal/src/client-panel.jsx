@@ -1,15 +1,24 @@
 /**
  * dsh-native-terminal — the bottom terminal panel.
  *
- * Renders a resizable dock below the conversation, holding tabs of split
- * panes. Each pane is an xterm.js instance bound to one host PTY session over
- * a WebSocket.
+ * Renders a resizable dock at the foot of the conversation column, holding
+ * tabs of split panes. Each pane is an xterm.js instance bound to one host PTY
+ * session over a WebSocket.
+ *
+ * Layout: the panel is PORTALLED out of its slot seat and appended to the
+ * conversation column root as its last flex child. That root is a
+ * `flex-direction: column` box holding the scrolling transcript and the
+ * composer, so a sibling with a fixed height genuinely SHRINKS the chat and
+ * pushes it up, instead of floating over it. Registering in place would instead
+ * trap the panel inside the composer's own stack, where it inherits the
+ * composer's narrower width and cannot reach the column's full height.
  *
  * xterm.js is pure JavaScript, so nothing here pulls a native module into the
  * page or the host process.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
@@ -43,19 +52,117 @@ if (typeof document !== 'undefined' && document.getElementById(XTERM_STYLE_ID) =
 let paneSeq = 0
 const nextPaneId = () => `pane-${++paneSeq}`
 
-/** Theme the terminal from the app's own CSS variables, so it follows light/dark. */
-function readTheme() {
-  if (typeof window === 'undefined') return {}
-  const styles = getComputedStyle(document.documentElement)
-  const pick = (name, fallback) => {
-    const value = styles.getPropertyValue(name).trim()
-    return value.length > 0 ? value : fallback
+/**
+ * Find the conversation column root to dock into.
+ *
+ * Structure (verified live, not assumed): the composer seat sits inside a
+ * scroll body, itself inside the column root — a `flex-direction: column` box
+ * spanning the full width beside the sidebar and the full viewport height.
+ * Walking up from our own seat to the outermost such flex column is resilient
+ * to the shell's hashed CSS-module class names, which are not a stable API.
+ */
+function findDockHost(from) {
+  let el = from
+  let best = null
+  for (let i = 0; i < 14 && el !== null && el !== document.body; i++) {
+    const style = window.getComputedStyle(el)
+    if (style.display === 'flex' && style.flexDirection === 'column') {
+      const rect = el.getBoundingClientRect()
+      // The column root fills the viewport height; inner stacks do not.
+      if (rect.height >= window.innerHeight - 4 && rect.width > 200) best = el
+    }
+    el = el.parentElement
   }
+  return best
+}
+
+/** True when the app is currently rendering its dark theme. */
+function isDarkTheme() {
+  if (typeof window === 'undefined') return true
+  const bg = getComputedStyle(document.documentElement)
+    .getPropertyValue('--dsw-alias-bg-l1')
+    .trim()
+  const rgb = /rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(bg)
+  if (rgb !== null) {
+    const luma = (Number(rgb[1]) * 299 + Number(rgb[2]) * 587 + Number(rgb[3]) * 114) / 1000
+    return luma < 128
+  }
+  const hex = /^#([0-9a-f]{6})$/i.exec(bg)
+  if (hex !== null) {
+    const n = parseInt(hex[1], 16)
+    const luma = (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000
+    return luma < 128
+  }
+  return !window.matchMedia?.('(prefers-color-scheme: light)').matches
+}
+
+/**
+ * Terminal colours.
+ *
+ * A COMPLETE 16-colour ANSI palette is mandatory, not decoration: zsh-autosuggestions
+ * paints its inline completion with a dim ANSI colour (bright black / colour 8),
+ * and `ls`, git and prompts all rely on the standard slots. Supplying only
+ * background/foreground leaves those slots at xterm's defaults, which is why the
+ * autosuggestion looked wrong against this surface.
+ *
+ * These are the standard macOS Terminal / VS Code dark and light sets, so output
+ * matches what the same commands look like in a native terminal.
+ */
+function readTheme() {
+  const dark = isDarkTheme()
+  const surface = getComputedStyle(document.documentElement)
+    .getPropertyValue('--dsw-alias-bg-l1')
+    .trim()
+
+  if (dark) {
+    return {
+      background: surface.length > 0 ? surface : '#1e1e1e',
+      foreground: '#cccccc',
+      cursor: '#cccccc',
+      cursorAccent: '#1e1e1e',
+      selectionBackground: 'rgba(120, 150, 200, 0.35)',
+      black: '#000000',
+      red: '#cd3131',
+      green: '#0dbc79',
+      yellow: '#e5e510',
+      blue: '#2472c8',
+      magenta: '#bc3fbc',
+      cyan: '#11a8cd',
+      white: '#e5e5e5',
+      // Bright black is the autosuggestion colour: visible, clearly dimmer.
+      brightBlack: '#6a7076',
+      brightRed: '#f14c4c',
+      brightGreen: '#23d18b',
+      brightYellow: '#f5f543',
+      brightBlue: '#3b8eea',
+      brightMagenta: '#d670d6',
+      brightCyan: '#29b8db',
+      brightWhite: '#ffffff',
+    }
+  }
+
   return {
-    background: pick('--dsw-alias-bg-l1', '#1e1e1e'),
-    foreground: pick('--dsw-alias-label-primary', '#d4d4d4'),
-    cursor: pick('--dsw-alias-label-primary', '#d4d4d4'),
-    selectionBackground: pick('--dsw-alias-fill-l2', 'rgba(255,255,255,0.25)'),
+    background: surface.length > 0 ? surface : '#ffffff',
+    foreground: '#333333',
+    cursor: '#333333',
+    cursorAccent: '#ffffff',
+    selectionBackground: 'rgba(80, 130, 200, 0.28)',
+    black: '#000000',
+    red: '#cd3131',
+    green: '#12813e',
+    yellow: '#949800',
+    blue: '#0451a5',
+    magenta: '#bc05bc',
+    cyan: '#0598bc',
+    white: '#555555',
+    brightBlack: '#8b9096',
+    brightRed: '#cd3131',
+    brightGreen: '#14ce5c',
+    brightYellow: '#b5ba00',
+    brightBlue: '#0451a5',
+    brightMagenta: '#bc05bc',
+    brightCyan: '#0598bc',
+    brightWhite: '#a5a5a5',
   }
 }
 
@@ -76,10 +183,20 @@ function TerminalPane({ paneId, cwd, fontSize, focused, onFocus, onExit, registe
     let disposed = false
     const term = new Terminal({
       fontSize,
+      // A literal stack, NOT a CSS var(): xterm measures the font from this
+      // string in canvas, where `var(...)` never resolves and silently falls
+      // back to a proportional font — which misaligns every column.
       fontFamily:
-        'var(--dsw-font-mono), Menlo, Monaco, "Cascadia Mono", "Courier New", monospace',
+        'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Mono", "Roboto Mono", "Courier New", monospace',
+      fontWeight: 400,
+      fontWeightBold: 600,
+      lineHeight: 1.2,
+      letterSpacing: 0,
       cursorBlink: true,
+      cursorStyle: 'bar',
       allowProposedApi: true,
+      drawBoldTextInBrightColors: false,
+      minimumContrastRatio: 1,
       scrollback: 10000,
       theme: readTheme(),
     })
@@ -189,6 +306,19 @@ function TerminalPane({ paneId, cwd, fontSize, focused, onFocus, onExit, registe
     }
   }, [fontSize])
 
+  /* Follow app light/dark changes without restarting the shell. */
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const term = termRef.current
+      if (term !== null) term.options.theme = readTheme()
+    })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme', 'style'],
+    })
+    return () => observer.disconnect()
+  }, [])
+
   /* Let the panel focus this pane by id (shortcut navigation). */
   useEffect(() => {
     registerFocuser?.(paneId, () => {
@@ -285,10 +415,17 @@ export function TerminalPanel({ cwd }) {
   const [activeTab, setActiveTab] = useState(null)
   const [focusedPane, setFocusedPane] = useState(null)
   const [settings, setSettings] = useState(null)
+  const [dockHost, setDockHost] = useState(null)
+  const seatRef = useRef(null)
   const [height, setHeight] = useState(() => {
     const stored = Number(window.localStorage.getItem(HEIGHT_KEY))
     return Number.isFinite(stored) && stored >= MIN_HEIGHT ? stored : 280
   })
+
+  /* Resolve the conversation column once our seat is in the document. */
+  useEffect(() => {
+    setDockHost(findDockHost(seatRef.current))
+  }, [])
 
   const focusers = useRef(new Map())
   const registerFocuser = useCallback((paneId, fn) => {
@@ -457,9 +594,13 @@ export function TerminalPanel({ cwd }) {
     document.addEventListener('pointerup', up)
   }
 
-  if (!open) return null
+  // An always-present marker: it anchors the portal lookup and stays in the
+  // slot seat, occupying no space.
+  const seat = <div ref={seatRef} style={{ display: 'none' }} />
 
-  return (
+  if (!open || dockHost === null) return seat
+
+  const panel = (
     <div className="dshNtRoot" style={{ height }}>
       <div className="dshNtResize" onPointerDown={startResize} />
       <div className="dshNtBar">
@@ -527,5 +668,12 @@ export function TerminalPanel({ cwd }) {
         )}
       </div>
     </div>
+  )
+
+  return (
+    <>
+      {seat}
+      {createPortal(panel, dockHost)}
+    </>
   )
 }

@@ -53,11 +53,19 @@ export function apply(ctx) {
   )
 
   // ── quick chats ───────────────────────────────────────────────────────────
-  const services = {
-    workspaces: ctx.get('workspaces'),
-    uiWorkspace: ctx.get('uiWorkspace'),
-  }
-  const QuickChats = createQuickChatsAction(services)
+  //
+  // Resolve the services LAZILY, per call. Reading them once here captures
+  // whatever exists at apply() time — and this plugin activates before
+  // `workspaces`/`uiWorkspace` mount, so an eager read pins `undefined`
+  // forever and every click reports "workspace services unavailable".
+  const QuickChats = createQuickChatsAction({
+    get workspaces() {
+      return ctx.get('workspaces')
+    },
+    get uiWorkspace() {
+      return ctx.get('uiWorkspace')
+    },
+  })
 
   ctx.slots.inject('sidebar.footer.action', () =>
     ctx.slots.register(
