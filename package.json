@@ -11,7 +11,7 @@
     "@xterm/addon-web-links": "0.11.0",
     "@xterm/xterm": "^6.0.0",
     "dsh-auto-review": "^0.12.4",
-    "dsh-plugin-subscriptions": "^0.9.2",
+    "dsh-plugin-subscriptions": "file:../../src/pkgs/dsh-plugin-subscriptions-0.9.2-codex-websearch.tgz",
     "dshmarket": "^1.47.0",
     "dsh-native-terminal": "workspace:*"
   },
@@ -24,8 +24,7 @@
         "dshmarket",
         "dsh-auto-review",
         "@tt-a1i/archify-dsh",
-        "@openviking/dsh-memory-plugin",
-        "dsh-native-terminal"
+        "@openviking/dsh-memory-plugin"
       ],
       "patchReload": "live"
     }

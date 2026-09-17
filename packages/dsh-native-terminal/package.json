@@ -2,7 +2,7 @@
   "name": "dsh-native-terminal",
   "version": "0.1.0",
   "private": true,
-  "description": "Native bottom terminal panel (tabs + splits + shortcuts) and workspace-free Quick chats for the DeepSeek Harness Web GUI. Uses the host's own PTY seam — no bundled native modules.",
+  "description": "Native bottom terminal panel (tabs + splits + shortcuts) and workspace-free Quick chats for the DeepSeek Harness Web GUI. Uses the host's own PTY seam \u2014 no bundled native modules.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

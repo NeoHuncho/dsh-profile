@@ -68,6 +68,23 @@
       - pattern: '[gG][iI][tT]\s+push\s+.*--force(?!-with-lease)'
         policy: human
         field: arguments
+      # Never let an in-harness agent stop or replace the host process. These
+      # are intentionally non-overridable; the user can restart externally.
+      - pattern: 'launchctl\s+.*com\.deepseek\.harness\.web'
+        policy: never
+        field: arguments
+      - pattern: 'dsh\s+(web|--profile\s+web)'
+        policy: never
+        field: arguments
+      - pattern: '\.dsh/launch/dsh-web'
+        policy: never
+        field: arguments
+      - pattern: '/dsh-market/(api/v1/)?restart'
+        policy: never
+        field: arguments
+      - pattern: '(^|[;&|]\s*)(kill|killall|pkill)\s+'
+        policy: never
+        field: arguments
     reviewerPolicyText: |
       You are judging one planned coding-agent action.
       Assess the exact action's intrinsic risk and whether the transcript
@@ -300,6 +317,10 @@
 #
 # Shortcuts and font size live in ~/.dsh/settings.yaml under `native-terminal:`.
 # ---------------------------------------------------------------------------
-- insert:
-    - id: native-terminal
-      name: 'dsh-native-terminal'
+
+# The harness is supervised by launchd. Self-restart can interrupt every live
+# agent and can race the supervisor, so only the user may restart it externally.
+- id: dsh-market
+  name: dshmarket
+  config:
+    allowRestart: false

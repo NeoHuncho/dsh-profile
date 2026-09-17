@@ -5,3 +5,5 @@
 {"at":"2026-09-17T20:00:06.624Z","level":"info","event":"install","detail":"@tt-a1i/archify-dsh exit=0 hot=false"}
 {"at":"2026-09-17T20:00:23.457Z","level":"info","event":"install","detail":"@openviking/dsh-memory-plugin exit=0 hot=false"}
 {"at":"2026-09-17T20:01:37.603Z","level":"info","event":"restart","detail":"scheduled pid=347 helper=2534"}
+{"at":"2026-09-17T20:54:20.985Z","level":"info","event":"hot-mount","detail":"dsh-native-terminal: live (client-only shim)"}
+{"at":"2026-09-17T20:54:20.986Z","level":"info","event":"boot","detail":"client-only shims mounted: dsh-native-terminal"}

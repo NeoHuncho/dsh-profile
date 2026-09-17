@@ -16,10 +16,12 @@ import { createQuickChatsAction } from './client-quickchats.jsx'
 import panelCss from './panel.css?raw'
 import quickChatsCss from './quickchats.css?raw'
 
-export const inject = {
-  required: ['slots'],
-  optional: ['workspaces', 'uiWorkspace', 'sessions'],
-}
+/**
+ * Hard dependency only. `workspaces` and `uiWorkspace` are read with
+ * `ctx.get()` inside apply(), so a host that does not mount them degrades the
+ * Quick chats group rather than leaving this whole plugin pending.
+ */
+export const inject = ['slots']
 
 /** Inject a stylesheet once, tagged for easy identification in devtools. */
 function installStyles(id, css) {

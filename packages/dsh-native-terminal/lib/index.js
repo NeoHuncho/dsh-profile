@@ -25,10 +25,7 @@ import z from '@deepseek-ai/schemastery'
 export const name = 'dsh-native-terminal'
 
 /** `subprocess` allocates the PTY; `webServer` carries bytes to the browser. */
-export const inject = {
-  required: ['subprocess', 'webServer'],
-  optional: ['settings', 'workspaceRegistry'],
-}
+export const inject = ['subprocess', 'webServer']
 
 export const Config = z.object({
   /** Route prefix owned by this plugin. */

@@ -10273,10 +10273,7 @@ var quickchats_default = ".dshQcRoot {\n  display: flex;\n  flex-direction: colu
 
 // src/client.jsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
-var inject = {
-  required: ["slots"],
-  optional: ["workspaces", "uiWorkspace", "sessions"]
-};
+var inject = ["slots"];
 function installStyles(id, css) {
   if (typeof document === "undefined") return () => {
   };
