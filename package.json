@@ -2,18 +2,19 @@
   "name": "dsh-profile-web",
   "private": true,
   "scripts": {
-    "postinstall": "node ./scripts/fix-pty-spawn-helper.mjs && node ./scripts/fix-auto-review-model-route.mjs"
+    "postinstall": "node ./scripts/fix-pty-spawn-helper.mjs"
   },
   "dependencies": {
-    "@openviking/dsh-memory-plugin": "^0.3.2",
     "@tt-a1i/archify-dsh": "^0.1.0",
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/addon-web-links": "0.11.0",
-    "@xterm/xterm": "^6.0.0",
-    "dsh-auto-review": "^0.12.4",
-    "dsh-plugin-subscriptions": "file:../../src/pkgs/dsh-plugin-subscriptions-0.9.2-codex-websearch.tgz",
-    "dshmarket": "^1.47.0",
-    "dsh-native-terminal": "workspace:*"
+    "dsh-agent-lifecycle-cleanup": "workspace:*",
+    "dsh-deepseek-auto-review": "workspace:*",
+    "dsh-model-shortcuts": "workspace:*",
+    "dsh-workspace-console": "workspace:*",
+    "dsh-persistence-guidance": "workspace:*",
+    "dsh-plugin-subscriptions": "file:./vendor/dsh-plugin-subscriptions-0.9.2-codex-websearch.tgz",
+    "dsh-quick-search": "workspace:*",
+    "dsh-sidebar-tray": "workspace:*",
+    "dshmarket": "^1.47.0"
   },
   "dsh": {
     "profile": {
@@ -22,9 +23,8 @@
         "@deepseek-ai/dsh-web-app",
         "dsh-plugin-subscriptions",
         "dshmarket",
-        "dsh-auto-review",
         "@tt-a1i/archify-dsh",
-        "@openviking/dsh-memory-plugin"
+        "dsh-quick-search"
       ],
       "patchReload": "live"
     }

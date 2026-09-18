@@ -1,1 +1,9 @@
 node_modules/
+.dsh-module-fallback/
+# runtime logs and caches written by dshmarket
+.dsh-market/log.ndjson
+.dsh-market/discovery-compatibility-v1.json
+# launchd logs (the launch dir is symlinked into the repo)
+home/launch/*.log
+*.log
+.DS_Store

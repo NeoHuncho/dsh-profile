@@ -1,0 +1,572 @@
+/*
+ * Tray styling.
+ *
+ * Every colour, radius and easing comes from the shell's own design tokens
+ * (--dsw-alias-*, --ds-ease-*), so the replacement region inherits theme
+ * switches, font-size preferences and the sidebar's scrollbar treatment
+ * without restating any literal value the shell owns.
+ */
+
+.tray-root {
+  --tray-edge-inset: var(--dsh-sidebar-inline-padding, 12px);
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-right: var(--tray-edge-inset);
+}
+
+.tray-root.tray-rail {
+  padding-right: 0;
+}
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+
+.tray-header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  margin-bottom: 4px;
+  padding-left: 4px;
+  color: var(--dsw-alias-label-tertiary);
+  overflow: hidden;
+}
+
+.tray-header-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 20px;
+}
+
+.tray-icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--dsw-alias-label-secondary);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.tray-icon-button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-icon-button:focus-visible {
+  outline: 1px solid var(--dsw-alias-state-business-primary);
+  outline-offset: -1px;
+}
+
+/* ── search ─────────────────────────────────────────────────────────────── */
+
+.tray-search {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  margin: 0 0 6px;
+  padding: 0 6px;
+  color: var(--dsw-alias-label-caption);
+  background: none;
+  border: 0.5px solid var(--dsw-alias-border-l4);
+  border-radius: 10px;
+}
+
+.tray-search-input {
+  flex: 1;
+  min-width: 0;
+  color: var(--dsw-alias-label-primary);
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.tray-search-input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ── list body ──────────────────────────────────────────────────────────── */
+
+.tray-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.tray-group {
+  margin-bottom: 2px;
+}
+
+.tray-project-row,
+.tray-session-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: var(--dsw-alias-label-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tray-project-row {
+  height: 34px;
+}
+
+.tray-session-row {
+  gap: 0;
+  height: 32px;
+  animation: tray-row-in 0.15s var(--ds-ease-in-out);
+}
+
+@keyframes tray-row-in {
+  0% {
+    opacity: 0;
+  }
+}
+
+.tray-project-row:hover,
+.tray-session-row:hover,
+.tray-session-row.tray-selected {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-arrow {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+  transition: transform 0.15s var(--ds-ease-in-out);
+}
+
+.tray-arrow-open {
+  transform: rotate(90deg);
+}
+
+.tray-project-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.tray-project-count {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* Status dot slot: keeps titles aligned whether or not a dot is present. */
+.tray-slot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 20px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.tray-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tray-dot-running {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.tray-dot-attention {
+  color: var(--dsw-alias-state-warning-primary, #d98a25);
+}
+
+.tray-dot-done {
+  color: var(--dsw-alias-state-success-primary, #35a06a);
+}
+
+.tray-session-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0 6px 0 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.tray-session-time {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.tray-session-row:hover .tray-session-time,
+.tray-session-row.tray-menu-open .tray-session-time {
+  display: none;
+}
+
+.tray-row-actions {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.tray-project-row:hover .tray-row-actions,
+.tray-session-row:hover .tray-row-actions,
+.tray-session-row.tray-menu-open .tray-row-actions,
+.tray-project-row.tray-menu-open .tray-row-actions {
+  display: inline-flex;
+}
+
+.tray-row-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: var(--dsw-alias-label-tertiary);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.tray-row-button:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ── Spaces ─────────────────────────────────────────────────────────────── */
+
+/*
+ * A horizontal strip of pills under the header (Arc/Zen style). The active
+ * pill is filled; hovering a pill reveals its Ctrl+Shift number.
+ */
+.tray-spaces {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 6px;
+  padding: 0 4px;
+}
+
+.tray-space {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  max-width: 100%;
+  padding: 0 9px;
+  color: var(--dsw-alias-label-secondary);
+  background: none;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: background var(--ds-ease-fast, 120ms), color var(--ds-ease-fast, 120ms);
+}
+
+.tray-space:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-space-active,
+.tray-space-active:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-interactive-bg-hover));
+  border-color: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
+  font-weight: 600;
+}
+
+.tray-space-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tray-space-count {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tray-space-key {
+  display: none;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  color: var(--dsw-alias-label-tertiary);
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tray-space:hover .tray-space-key {
+  display: inline-block;
+}
+
+.tray-space-add {
+  width: 24px;
+  padding: 0;
+  justify-content: center;
+  border-style: dashed;
+  font-size: 13px;
+}
+
+/* Collapsed rail: vertical stack of initials. */
+.tray-spaces-rail {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  padding: 0;
+  margin-top: 6px;
+}
+
+.tray-spaces-rail .tray-space {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tray-space-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 4px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.tray-space-menu-title {
+  padding: 4px 8px 6px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tray-space-menu button {
+  padding: 6px 8px;
+  color: var(--dsw-alias-label-primary);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.tray-space-menu button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-space-menu-danger {
+  color: var(--dsw-alias-status-error, #d33) !important;
+}
+
+/* ── show more / empty / status ─────────────────────────────────────────── */
+
+.tray-more {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 4px 8px 4px 30px;
+  color: var(--dsw-alias-label-tertiary);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.tray-more:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-status {
+  padding: 10px 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* ── search results ─────────────────────────────────────────────────────── */
+
+.tray-result-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 8px;
+  color: var(--dsw-alias-label-primary);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tray-result-row:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-result-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.tray-result-meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.tray-result-snippet {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 17px;
+}
+
+/* ── settled drawer ─────────────────────────────────────────────────────── */
+
+/*
+ * Pinned to the foot of the region, directly above the shell's Settings row,
+ * and never scrolls away with the list.
+ */
+.tray-settled {
+  flex: none;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 0.5px solid var(--dsw-alias-border-l1);
+}
+
+.tray-settled-header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  color: var(--dsw-alias-label-secondary);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tray-settled-header:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-settled-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.tray-settled-count {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.tray-settled-list {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.tray-settled-row .tray-session-title {
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* ── rail (collapsed sidebar) ───────────────────────────────────────────── */
+
+.tray-rail .tray-header {
+  justify-content: flex-start;
+  margin-bottom: 12px;
+  padding-left: 0;
+}
+
+.tray-rail .tray-icon-button {
+  width: 36px;
+  height: 36px;
+  color: var(--dsw-alias-label-primary);
+}

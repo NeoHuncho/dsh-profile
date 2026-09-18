@@ -1,0 +1,3 @@
+# Mounted explicitly from the profile patch (see ~/.dsh/profiles/web/cordis.patch.yml),
+# so this bundle patch intentionally adds nothing on its own.
+[]

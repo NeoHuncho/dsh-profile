@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${DSH_HOME:-$HOME/.dsh}/guards/block-process-control.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "dsh-model-shortcuts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Keyboard shortcuts for switching the model and the reasoning effort, with number-key selection of each level.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-model-selection"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "license": "MIT"
+}

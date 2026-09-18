@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.deepseek.harness.web</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>__DSH_HOME__/launch/dsh-web.sh</string>
+  </array>
+
+  <!-- Start at login. -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart the server whenever it exits, including the in-app Restart button. -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Do not hammer launchd if startup fails repeatedly. -->
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <key>WorkingDirectory</key>
+  <string>__HOME__</string>
+
+  <key>StandardOutPath</key>
+  <string>__DSH_HOME__/launch/dsh-web.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__DSH_HOME__/launch/dsh-web.err.log</string>
+</dict>
+</plist>
