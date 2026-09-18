@@ -52,3 +52,20 @@ Configured in `~/.dsh/settings.yaml` under the existing `native-terminal:` names
 ## Persistence and build
 
 The package is a profile-local workspace dependency and is mounted from `~/.dsh/profiles/web/cordis.patch.yml`, so it survives Harness restarts. Run `node scripts/build.mjs` after source changes; it regenerates `lib/client.js` and copies the host entry to `lib/index.js`.
+
+## Worktree environments (`.agents/env.json`)
+
+A workspace with `.agents/env.json` gets a fresh git worktree per conversation. The sidebar tray asks this package (through `window.__dshEnv__`) to create one whenever a new conversation is started on such a project; the child workspace appears nested under the project and follows its Space.
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `worktreeRoot` | `.worktrees/{slug}` | Where the worktree lives; `{slug}`, `{project}`, `~` allowed |
+| `branchPrefix` | `env/` | Branch `env/<slug>` is created from HEAD and **kept forever** |
+| `share` | `["node_modules"]` | Directories symlinked from the main checkout (added to `info/exclude`) |
+| `ports` | `{base,count,stride}` | Env *k* gets `base + k*stride … +count-1`; *k* is the lowest free index |
+| `healthPort` | — | Index into the port block used to detect a running env started outside the engine |
+| `setup` / `start` / `stop` / `teardown` | — | Scripts run in the worktree with `ENV_SLUG ENV_DIR ENV_ROOT ENV_BRANCH ENV_INDEX ENV_PORT_0..N ENV_PORTS` |
+
+Lifecycle: **create** (worktree + share + setup) → **Start environment** button in the header (only while stopped) → Stop / Restart / Logs → **settle** the conversation ⇒ teardown (WIP commit on the env branch, `teardown` script, `git worktree remove`, child workspace deleted) → **unsettle** ⇒ restore from the branch.
+
+State: `$DSH_HOME/storages/env-registry.json`; logs: `$DSH_HOME/storages/env-logs/<id>.log`. HTTP: `GET/POST /native-terminal/envs`, `POST /native-terminal/envs/<id>/(start|stop|restart|teardown|restore|forget)`, `GET …/<id>/log`.

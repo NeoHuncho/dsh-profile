@@ -20,7 +20,7 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, openSync, readFileSync, renameSync, statSync, symlinkSync, writeFileSync, closeSync } from 'node:fs'
+import { existsSync, mkdirSync, openSync, readFileSync, renameSync, rmdirSync, statSync, symlinkSync, writeFileSync, closeSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve as resolvePath } from 'node:path'
 
@@ -401,6 +401,12 @@ export function createEnvEngine(deps) {
         git(env.parentPath, ['worktree', 'remove', '--force', env.dir])
       }
       git(env.parentPath, ['worktree', 'prune'], { allowFailure: true })
+      // Remove now-empty ancestors created for the worktree (e.g. ~/.dsh-lab/<slug>/profiles).
+      let cursor = dirname(env.dir)
+      for (let i = 0; i < 3 && cursor !== env.parentPath && cursor !== homedir(); i += 1) {
+        try { rmdirSync(cursor) } catch { break }
+        cursor = dirname(cursor)
+      }
       if (env.childWorkspaceId) {
         try { await deps.workspaceRegistry.delete(env.childWorkspaceId) } catch (error) { logger.warn?.(String(error?.message ?? error)) }
       }

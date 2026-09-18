@@ -2,7 +2,7 @@
   "name": "dsh-workspace-console",
   "version": "0.1.0",
   "private": true,
-  "description": "Workspace Console for DeepSeek Harness: native terminals plus editable per-workspace actions and keyboard chords.",
+  "description": "Workspace Console for DeepSeek Harness: native terminals, editable per-workspace actions and keyboard chords, and per-conversation git worktree environments (.agents/env.json).",
   "type": "module",
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
