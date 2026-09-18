@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "actions": [
+    { "id": "lab-restart", "name": "Restart lab harness", "icon": "↻", "command": "scripts/env/harness.sh restart", "shortcut": "ctrl+shift+k r" },
+    { "id": "lab-logs", "name": "Lab logs", "icon": "≣", "command": "scripts/env/harness.sh logs" },
+    { "id": "build-all", "name": "Build plugins", "icon": "⚙", "command": "for p in packages/*/; do [ -f $p/scripts/build.mjs ] && (cd $p && node scripts/build.mjs); done" }
+  ]
+}

@@ -70,4 +70,6 @@ writeFileSync(join(root, 'lib', 'client.js'), wrapped)
 // Keep the host half in lockstep too; it is intentionally plain ESM and has no
 // separate bundling step.
 writeFileSync(join(root, 'lib', 'index.js'), readFileSync(join(root, 'src', 'host.js'), 'utf8'))
+// Host-side siblings imported by host.js ship verbatim next to it.
+writeFileSync(join(root, 'lib', 'envs.js'), readFileSync(join(root, 'src', 'envs.js'), 'utf8'))
 console.log(`[${PKG}] built lib/client.js (${(wrapped.length / 1024).toFixed(0)} kB) and copied lib/index.js`)

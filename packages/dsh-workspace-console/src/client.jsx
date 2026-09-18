@@ -11,6 +11,8 @@ import React from 'react'
 
 import { TerminalPanel } from './client-panel.jsx'
 import { WorkspaceActions } from './workspace-actions.jsx'
+import { EnvActions } from './env-actions.jsx'
+import { installEnvBridge } from './env-store.js'
 import panelCss from './panel.css?raw'
 import workspaceActionsCss from './workspace-actions.css?raw'
 
@@ -34,6 +36,8 @@ function installStyles(id, css) {
 export function apply(ctx) {
   ctx.effect(() => installStyles('panel', panelCss), 'workspace-console: panel styles')
   ctx.effect(() => installStyles('workspace-actions', workspaceActionsCss), 'workspace-console: workspace action styles')
+  // Worktree environments: poller + window bridge used by the sidebar tray.
+  ctx.effect(() => installEnvBridge(), 'workspace-console: environment bridge')
 
   // ── terminal dock ─────────────────────────────────────────────────────────
   ctx.slots.inject('conversation.input.dock', () =>
@@ -70,6 +74,18 @@ export function apply(ctx) {
         order: -20,
       },
       (props) => <WorkspaceActions {...props} />,
+    ),
+  )
+
+  // Environment Start/Stop/Restart, only for sessions living in a worktree env.
+  ctx.slots.inject('conversation.session.header.utilities', () =>
+    ctx.slots.register(
+      {
+        name: 'conversation.session.header.utilities',
+        id: 'env-actions',
+        order: -30,
+      },
+      (props) => <EnvActions {...props} />,
     ),
   )
 

@@ -495,12 +495,23 @@ function SidebarTray(props) {
       }
     }
   } else {
+    // Environment child workspaces render nested under their parent project.
+    const childrenOf = new Map()
+    const topLevel = []
     for (const group of groups) {
+      const parent = group.workspaceId === undefined ? undefined : envParents[group.workspaceId]
+      if (parent !== undefined && groups.some((g) => g.workspaceId === parent)) {
+        if (!childrenOf.has(parent)) childrenOf.set(parent, [])
+        childrenOf.get(parent).push(group)
+      } else topLevel.push(group)
+    }
+    const renderGroup = (group, nested) => {
       const label = group.label || workspaceLabel(group.cwd) || 'Ungrouped'
-      body.push(
+      const env = nested && group.workspaceId !== undefined ? window.__dshEnv__?.envForWorkspace(group.workspaceId) : undefined
+      return (
         React.createElement(
           'div',
-          { className: 'tray-group', key: `group-${group.key || 'ungrouped'}` },
+          { className: `tray-group${nested ? ' tray-group-nested' : ''}`, key: `group-${group.key || 'ungrouped'}` },
           React.createElement(
             'div',
             {
@@ -513,14 +524,17 @@ function SidebarTray(props) {
               { className: `tray-arrow${group.expanded ? ' tray-arrow-open' : ''}`, 'aria-hidden': 'true' },
               '\u25B6',
             ),
-            React.createElement('span', { className: 'tray-project-label' }, label),
+            env !== undefined
+              ? React.createElement('span', { className: `tray-env-dot tray-env-dot-${env.state}`, 'aria-hidden': 'true', title: env.state })
+              : null,
+            React.createElement('span', { className: 'tray-project-label' }, nested ? label.replace(/^.*\u00B7\s*/, '') : label),
             React.createElement('span', { className: 'tray-project-count' }, String(group.sessionCount)),
             group.workspaceId === undefined
               ? null
               : React.createElement(
                   'span',
                   { className: 'tray-row-actions' },
-                  spaces.length > 1
+                  spaces.length > 1 && !nested
                     ? React.createElement(
                         'button',
                         {
@@ -560,7 +574,7 @@ function SidebarTray(props) {
               selected: node.id === list.current,
               now,
               onOpen: tray.open,
-              onSettle: tray.settle,
+              onSettle: (id) => tray.settle(id, list.byId?.[id]?.cwd),
               onRename: tray.renameSession,
               onFork: tray.forkSession,
               onArchive: tray.archiveSession,
@@ -585,8 +599,12 @@ function SidebarTray(props) {
                 'Show less',
               )
             : null,
-        ),
+        )
       )
+    }
+    for (const group of topLevel) {
+      body.push(renderGroup(group, false))
+      for (const child of childrenOf.get(group.workspaceId) ?? []) body.push(renderGroup(child, true))
     }
 
     if (groups.length === 0) {
@@ -718,7 +736,7 @@ function SidebarTray(props) {
                           'aria-label': `Unsettle ${row.title}`,
                           onClick: (event) => {
                             event.stopPropagation()
-                            tray.unsettle(row.id)
+                            tray.unsettle(row.id, list.byId?.[row.id]?.cwd)
                           },
                         },
                         '\u21A9',
@@ -780,9 +798,34 @@ export function apply(ctx) {
     'sidebar-tray: settings sync',
   )
 
+  // Worktree environments are owned by dsh-workspace-console, which exposes a
+  // small bridge on `window.__dshEnv__` (no shared client service exists
+  // between two profile packages). Everything below degrades to plain
+  // behaviour when that package is not mounted.
+  const envBridge = () => window.__dshEnv__
+
   const tray = {
     open: (sessionId) => uiWorkspace.openSession(sessionId),
-    startSession: (workspaceId) => uiWorkspace.startSession(workspaceId),
+    /**
+     * New conversation. On an env-enabled project (one with `.agents/env.json`)
+     * this first creates a fresh worktree + child workspace and starts the
+     * session there — the environment itself stays stopped until the user
+     * presses Start in the header. A worktree that is already an env child
+     * gets an ordinary session in place.
+     */
+    startSession: async (workspaceId) => {
+      const bridge = envBridge()
+      if (workspaceId !== undefined && bridge?.isEnvProject(workspaceId) && bridge.envForWorkspace(workspaceId) === undefined) {
+        try {
+          const env = await bridge.createForWorkspace(workspaceId)
+          if (env?.childWorkspaceId) return uiWorkspace.startSession(env.childWorkspaceId)
+        } catch (error) {
+          console.error('[dsh-sidebar-tray] could not create environment, starting in the main checkout', error)
+          window.alert(`Could not create a worktree environment:\n${error?.message ?? error}\n\nStarting the conversation in the main checkout instead.`)
+        }
+      }
+      return uiWorkspace.startSession(workspaceId)
+    },
     forkSession: (sessionId) => {
       Promise.resolve(uiWorkspace.forkSession(sessionId)).catch(() => {})
     },
@@ -797,8 +840,33 @@ export function apply(ctx) {
       const session = sessions.binding(sessionId)?.session
       Promise.resolve(session?.rename(trimmed)).catch(() => {})
     },
-    settle: (sessionId) => settledStore.settle(sessionId),
-    unsettle: (sessionId) => settledStore.unsettle(sessionId),
+    /**
+     * Settling a conversation that lives in a worktree environment stops and
+     * deletes that environment (uncommitted work is committed to its branch,
+     * which is kept). Unsettling restores the worktree from that branch.
+     */
+    settle: (sessionId, cwd) => {
+      settledStore.settle(sessionId)
+      const bridge = envBridge()
+      const env = cwd && bridge ? bridge.envForCwd(cwd) : undefined
+      if (env !== undefined) {
+        Promise.resolve(bridge.act(env.id, 'teardown')).catch((error) => {
+          console.error('[dsh-sidebar-tray] environment teardown failed', error)
+          window.alert(`Conversation settled, but its environment could not be torn down:\n${error?.message ?? error}`)
+        })
+      }
+    },
+    unsettle: (sessionId, cwd) => {
+      settledStore.unsettle(sessionId)
+      const bridge = envBridge()
+      const env = cwd && bridge ? bridge.tornDownFor(cwd) : undefined
+      if (env !== undefined) {
+        Promise.resolve(bridge.act(env.id, 'restore')).catch((error) => {
+          console.error('[dsh-sidebar-tray] environment restore failed', error)
+          window.alert(`Conversation restored, but its environment could not be recreated:\n${error?.message ?? error}`)
+        })
+      }
+    },
     searchSessions: async (query, signal) => {
       const result = await sessions.search(query, signal)
       if (result?.ok !== true) throw new Error(result?.error?.message ?? 'search failed')

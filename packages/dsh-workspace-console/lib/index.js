@@ -24,6 +24,8 @@ import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'no
 import { dirname, isAbsolute, resolve as resolvePath } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 
+import { createEnvEngine } from './envs.js'
+
 export const name = 'dsh-workspace-console'
 
 /** PTYs, authenticated HTTP transport, and durable Workspace identity. */
@@ -274,6 +276,53 @@ export function apply(ctx, config) {
     }),
   )
 
+  // ── worktree environments ─────────────────────────────────────────────────
+  //
+  // Clients poll `/envs` (cheap: registry + pid checks) and re-fetch when the
+  // header button acts. Parent↔child workspace mapping is derived here so the
+  // sidebar can nest env workspaces under their project.
+  const envs = createEnvEngine({
+    workspaceRegistry: ctx.workspaceRegistry,
+    logger: ctx.logger,
+    onChange: () => { envRevision += 1 },
+  })
+  let envRevision = 1
+
+  async function handleEnvRoute(route, req, res, url) {
+    if (route === '/envs' && req.method === 'GET') {
+      // Registry projection plus which registered workspaces opt in.
+      const projects = {}
+      for (const workspace of ctx.workspaceRegistry.list()) {
+        try {
+          const described = envs.describeProject(workspace.path)
+          if (described !== undefined) projects[workspace.id] = { path: workspace.path, gitRepo: described.gitRepo, hasStart: described.config.start !== undefined }
+        } catch (error) {
+          projects[workspace.id] = { path: workspace.path, error: String(error?.message ?? error) }
+        }
+      }
+      return json(res, 200, { revision: envRevision, projects, envs: envs.list() })
+    }
+    if (route === '/envs' && req.method === 'POST') {
+      const body = await readJson(req)
+      const parent = body?.workspaceId ? ctx.workspaceRegistry.get(body.workspaceId) : (await resolveWorkspace(body?.cwd)).value
+      if (parent === undefined) return json(res, 404, { error: 'unknown workspace' })
+      return json(res, 200, { env: await envs.create(parent) })
+    }
+    const match = /^\/envs\/([^/]+)(?:\/(start|stop|restart|teardown|restore|forget|log))?$/.exec(route)
+    if (match === null) return false
+    const [, id, action] = match
+    if (req.method === 'GET' && action === undefined) {
+      const env = envs.status(id)
+      return env === undefined ? json(res, 404, { error: 'unknown environment' }) : json(res, 200, { env })
+    }
+    if (req.method === 'GET' && action === 'log') return json(res, 200, { log: envs.logTail(id, Number(url.searchParams.get('lines')) || 200) })
+    if (req.method === 'POST' && action !== undefined && action !== 'log') {
+      if (action === 'forget') { envs.forget(id); return json(res, 200, { ok: true }) }
+      return json(res, 200, { env: await envs[action](id) })
+    }
+    return false
+  }
+
   async function handleHttp(req, res) {
     const rejection = ctx.connection.requestRejection(req)
     if (rejection !== undefined) {
@@ -284,6 +333,11 @@ export function apply(ctx, config) {
 
     const url = new URL(req.url ?? '/', 'http://localhost')
     const route = url.pathname.slice(config.basePath.length) || '/'
+
+    if (route.startsWith('/envs')) {
+      const handled = await handleEnvRoute(route, req, res, url)
+      if (handled !== false) return handled
+    }
 
     if (route === '/actions' && req.method === 'GET') {
       const workspace = await resolveWorkspace(url.searchParams.get('cwd'))

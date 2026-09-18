@@ -453,7 +453,7 @@ function useShortcutActivation(React, enabled, onActivate) {
 }
 
 // raw-css:/Users/williamguinaudie/.dsh/profiles/web/packages/dsh-sidebar-tray/src/tray.css
-var tray_default = "/*\n * Tray styling.\n *\n * Every colour, radius and easing comes from the shell's own design tokens\n * (--dsw-alias-*, --ds-ease-*), so the replacement region inherits theme\n * switches, font-size preferences and the sidebar's scrollbar treatment\n * without restating any literal value the shell owns.\n */\n\n.tray-root {\n  --tray-edge-inset: var(--dsh-sidebar-inline-padding, 12px);\n  box-sizing: border-box;\n  display: flex;\n  flex: 1;\n  flex-direction: column;\n  min-height: 0;\n  padding-right: var(--tray-edge-inset);\n}\n\n.tray-root.tray-rail {\n  padding-right: 0;\n}\n\n/* \u2500\u2500 header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-header {\n  box-sizing: border-box;\n  display: flex;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  height: 36px;\n  margin-bottom: 4px;\n  padding-left: 4px;\n  color: var(--dsw-alias-label-tertiary);\n  overflow: hidden;\n}\n\n.tray-header-label {\n  flex: 1;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  line-height: 20px;\n}\n\n.tray-icon-button {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  color: var(--dsw-alias-label-secondary);\n  background: none;\n  border: none;\n  border-radius: 50%;\n  cursor: pointer;\n  font-size: 15px;\n  line-height: 1;\n}\n\n.tray-icon-button:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-icon-button:focus-visible {\n  outline: 1px solid var(--dsw-alias-state-business-primary);\n  outline-offset: -1px;\n}\n\n/* \u2500\u2500 search \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-search {\n  box-sizing: border-box;\n  display: flex;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  height: 30px;\n  margin: 0 0 6px;\n  padding: 0 6px;\n  color: var(--dsw-alias-label-caption);\n  background: none;\n  border: 0.5px solid var(--dsw-alias-border-l4);\n  border-radius: 10px;\n}\n\n.tray-search-input {\n  flex: 1;\n  min-width: 0;\n  color: var(--dsw-alias-label-primary);\n  background: none;\n  border: none;\n  outline: none;\n  font-size: 13px;\n  line-height: 18px;\n}\n\n.tray-search-input::placeholder {\n  color: var(--dsw-alias-label-tertiary);\n}\n\n/* \u2500\u2500 list body \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-body {\n  flex: 1;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n}\n\n.tray-group {\n  margin-bottom: 2px;\n}\n\n.tray-project-row,\n.tray-session-row {\n  box-sizing: border-box;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 0 8px;\n  color: var(--dsw-alias-label-primary);\n  border-radius: 8px;\n  cursor: pointer;\n  user-select: none;\n}\n\n.tray-project-row {\n  height: 34px;\n}\n\n.tray-session-row {\n  gap: 0;\n  height: 32px;\n  animation: tray-row-in 0.15s var(--ds-ease-in-out);\n}\n\n@keyframes tray-row-in {\n  0% {\n    opacity: 0;\n  }\n}\n\n.tray-project-row:hover,\n.tray-session-row:hover,\n.tray-session-row.tray-selected {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-arrow {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 10px;\n  transition: transform 0.15s var(--ds-ease-in-out);\n}\n\n.tray-arrow-open {\n  transform: rotate(90deg);\n}\n\n.tray-project-label {\n  flex: 1;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.tray-project-count {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 20px;\n}\n\n/* Status dot slot: keeps titles aligned whether or not a dot is present. */\n.tray-slot {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 20px;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n.tray-dot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: currentColor;\n}\n\n.tray-dot-running {\n  color: var(--dsw-alias-state-business-primary);\n}\n\n.tray-dot-attention {\n  color: var(--dsw-alias-state-warning-primary, #d98a25);\n}\n\n.tray-dot-done {\n  color: var(--dsw-alias-state-success-primary, #35a06a);\n}\n\n.tray-session-title {\n  flex: 1;\n  min-width: 0;\n  margin: 0 6px 0 4px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.tray-session-time {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 20px;\n}\n\n.tray-session-row:hover .tray-session-time,\n.tray-session-row.tray-menu-open .tray-session-time {\n  display: none;\n}\n\n.tray-row-actions {\n  display: none;\n  flex: none;\n  align-items: center;\n  gap: 6px;\n}\n\n.tray-project-row:hover .tray-row-actions,\n.tray-session-row:hover .tray-row-actions,\n.tray-session-row.tray-menu-open .tray-row-actions,\n.tray-project-row.tray-menu-open .tray-row-actions {\n  display: inline-flex;\n}\n\n.tray-row-button {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 18px;\n  height: 18px;\n  padding: 0;\n  color: var(--dsw-alias-label-tertiary);\n  background: none;\n  border: none;\n  border-radius: 4px;\n  cursor: pointer;\n  font-size: 13px;\n  line-height: 1;\n}\n\n.tray-row-button:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n/* \u2500\u2500 Spaces \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n/*\n * A horizontal strip of pills under the header (Arc/Zen style). The active\n * pill is filled; hovering a pill reveals its Ctrl+Shift number.\n */\n.tray-spaces {\n  position: relative;\n  display: flex;\n  flex: none;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 4px;\n  margin: 0 0 6px;\n  padding: 0 4px;\n}\n\n.tray-space {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  gap: 5px;\n  height: 24px;\n  max-width: 100%;\n  padding: 0 9px;\n  color: var(--dsw-alias-label-secondary);\n  background: none;\n  border: 0.5px solid var(--dsw-alias-border-l2);\n  border-radius: 12px;\n  cursor: pointer;\n  font-size: 12px;\n  line-height: 1;\n  transition: background var(--ds-ease-fast, 120ms), color var(--ds-ease-fast, 120ms);\n}\n\n.tray-space:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-space-active,\n.tray-space-active:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-interactive-bg-hover));\n  border-color: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));\n  font-weight: 600;\n}\n\n.tray-space-label {\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.tray-space-count {\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 11px;\n  font-variant-numeric: tabular-nums;\n}\n\n.tray-space-key {\n  display: none;\n  min-width: 14px;\n  height: 14px;\n  padding: 0 3px;\n  color: var(--dsw-alias-label-tertiary);\n  border: 0.5px solid var(--dsw-alias-border-l2);\n  border-radius: 4px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 13px;\n  text-align: center;\n  font-variant-numeric: tabular-nums;\n}\n\n.tray-space:hover .tray-space-key {\n  display: inline-block;\n}\n\n.tray-space-add {\n  width: 24px;\n  padding: 0;\n  justify-content: center;\n  border-style: dashed;\n  font-size: 13px;\n}\n\n/* Collapsed rail: vertical stack of initials. */\n.tray-spaces-rail {\n  flex-direction: column;\n  flex-wrap: nowrap;\n  padding: 0;\n  margin-top: 6px;\n}\n\n.tray-spaces-rail .tray-space {\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  justify-content: center;\n  border-radius: 8px;\n  font-size: 11px;\n  font-weight: 600;\n}\n\n.tray-space-menu {\n  position: absolute;\n  top: calc(100% + 4px);\n  left: 4px;\n  z-index: 20;\n  display: flex;\n  flex-direction: column;\n  min-width: 160px;\n  padding: 4px;\n  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));\n  border: 0.5px solid var(--dsw-alias-border-l2);\n  border-radius: 10px;\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);\n}\n\n.tray-space-menu-title {\n  padding: 4px 8px 6px;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 11px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.tray-space-menu button {\n  padding: 6px 8px;\n  color: var(--dsw-alias-label-primary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 12px;\n}\n\n.tray-space-menu button:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-space-menu-danger {\n  color: var(--dsw-alias-status-error, #d33) !important;\n}\n\n/* \u2500\u2500 show more / empty / status \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-more {\n  display: block;\n  width: 100%;\n  margin: 0;\n  padding: 4px 8px 4px 30px;\n  color: var(--dsw-alias-label-tertiary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n  font-size: 12px;\n  line-height: 18px;\n}\n\n.tray-more:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-status {\n  padding: 10px 8px;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 13px;\n  line-height: 18px;\n}\n\n/* \u2500\u2500 search results \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-result-row {\n  box-sizing: border-box;\n  display: flex;\n  flex-direction: column;\n  align-items: stretch;\n  width: 100%;\n  min-height: 44px;\n  padding: 4px 8px;\n  color: var(--dsw-alias-label-primary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n}\n\n.tray-result-row:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-result-title {\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.tray-result-meta {\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 17px;\n}\n\n.tray-result-snippet {\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  color: var(--dsw-alias-label-secondary);\n  font-size: 12px;\n  line-height: 17px;\n}\n\n/* \u2500\u2500 settled drawer \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n/*\n * Pinned to the foot of the region, directly above the shell's Settings row,\n * and never scrolls away with the list.\n */\n.tray-settled {\n  flex: none;\n  margin-top: 4px;\n  padding-top: 4px;\n  border-top: 0.5px solid var(--dsw-alias-border-l1);\n}\n\n.tray-settled-header {\n  box-sizing: border-box;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  width: 100%;\n  height: 32px;\n  padding: 0 8px;\n  color: var(--dsw-alias-label-secondary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n}\n\n.tray-settled-header:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-settled-label {\n  flex: 1;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 13px;\n  line-height: 20px;\n}\n\n.tray-settled-count {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 20px;\n}\n\n.tray-settled-list {\n  max-height: 40vh;\n  overflow-y: auto;\n}\n\n.tray-settled-row .tray-session-title {\n  color: var(--dsw-alias-label-secondary);\n}\n\n/* \u2500\u2500 rail (collapsed sidebar) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-rail .tray-header {\n  justify-content: flex-start;\n  margin-bottom: 12px;\n  padding-left: 0;\n}\n\n.tray-rail .tray-icon-button {\n  width: 36px;\n  height: 36px;\n  color: var(--dsw-alias-label-primary);\n}\n";
+var tray_default = "/*\n * Tray styling.\n *\n * Every colour, radius and easing comes from the shell's own design tokens\n * (--dsw-alias-*, --ds-ease-*), so the replacement region inherits theme\n * switches, font-size preferences and the sidebar's scrollbar treatment\n * without restating any literal value the shell owns.\n */\n\n.tray-root {\n  --tray-edge-inset: var(--dsh-sidebar-inline-padding, 12px);\n  box-sizing: border-box;\n  display: flex;\n  flex: 1;\n  flex-direction: column;\n  min-height: 0;\n  padding-right: var(--tray-edge-inset);\n}\n\n.tray-root.tray-rail {\n  padding-right: 0;\n}\n\n/* \u2500\u2500 header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-header {\n  box-sizing: border-box;\n  display: flex;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  height: 36px;\n  margin-bottom: 4px;\n  padding-left: 4px;\n  color: var(--dsw-alias-label-tertiary);\n  overflow: hidden;\n}\n\n.tray-header-label {\n  flex: 1;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  line-height: 20px;\n}\n\n.tray-icon-button {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  color: var(--dsw-alias-label-secondary);\n  background: none;\n  border: none;\n  border-radius: 50%;\n  cursor: pointer;\n  font-size: 15px;\n  line-height: 1;\n}\n\n.tray-icon-button:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-icon-button:focus-visible {\n  outline: 1px solid var(--dsw-alias-state-business-primary);\n  outline-offset: -1px;\n}\n\n/* \u2500\u2500 search \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-search {\n  box-sizing: border-box;\n  display: flex;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  height: 30px;\n  margin: 0 0 6px;\n  padding: 0 6px;\n  color: var(--dsw-alias-label-caption);\n  background: none;\n  border: 0.5px solid var(--dsw-alias-border-l4);\n  border-radius: 10px;\n}\n\n.tray-search-input {\n  flex: 1;\n  min-width: 0;\n  color: var(--dsw-alias-label-primary);\n  background: none;\n  border: none;\n  outline: none;\n  font-size: 13px;\n  line-height: 18px;\n}\n\n.tray-search-input::placeholder {\n  color: var(--dsw-alias-label-tertiary);\n}\n\n/* \u2500\u2500 list body \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-body {\n  flex: 1;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n}\n\n.tray-group {\n  margin-bottom: 2px;\n}\n\n.tray-project-row,\n.tray-session-row {\n  box-sizing: border-box;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 0 8px;\n  color: var(--dsw-alias-label-primary);\n  border-radius: 8px;\n  cursor: pointer;\n  user-select: none;\n}\n\n.tray-project-row {\n  height: 34px;\n}\n\n.tray-session-row {\n  gap: 0;\n  height: 32px;\n  animation: tray-row-in 0.15s var(--ds-ease-in-out);\n}\n\n@keyframes tray-row-in {\n  0% {\n    opacity: 0;\n  }\n}\n\n.tray-project-row:hover,\n.tray-session-row:hover,\n.tray-session-row.tray-selected {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-arrow {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 10px;\n  transition: transform 0.15s var(--ds-ease-in-out);\n}\n\n.tray-arrow-open {\n  transform: rotate(90deg);\n}\n\n.tray-project-label {\n  flex: 1;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.tray-project-count {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 20px;\n}\n\n/* Status dot slot: keeps titles aligned whether or not a dot is present. */\n.tray-slot {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 20px;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n.tray-dot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: currentColor;\n}\n\n.tray-dot-running {\n  color: var(--dsw-alias-state-business-primary);\n}\n\n.tray-dot-attention {\n  color: var(--dsw-alias-state-warning-primary, #d98a25);\n}\n\n.tray-dot-done {\n  color: var(--dsw-alias-state-success-primary, #35a06a);\n}\n\n.tray-session-title {\n  flex: 1;\n  min-width: 0;\n  margin: 0 6px 0 4px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.tray-session-time {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 20px;\n}\n\n.tray-session-row:hover .tray-session-time,\n.tray-session-row.tray-menu-open .tray-session-time {\n  display: none;\n}\n\n.tray-row-actions {\n  display: none;\n  flex: none;\n  align-items: center;\n  gap: 6px;\n}\n\n.tray-project-row:hover .tray-row-actions,\n.tray-session-row:hover .tray-row-actions,\n.tray-session-row.tray-menu-open .tray-row-actions,\n.tray-project-row.tray-menu-open .tray-row-actions {\n  display: inline-flex;\n}\n\n.tray-row-button {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  justify-content: center;\n  width: 18px;\n  height: 18px;\n  padding: 0;\n  color: var(--dsw-alias-label-tertiary);\n  background: none;\n  border: none;\n  border-radius: 4px;\n  cursor: pointer;\n  font-size: 13px;\n  line-height: 1;\n}\n\n.tray-row-button:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n/* \u2500\u2500 Spaces \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n/*\n * A horizontal strip of pills under the header (Arc/Zen style). The active\n * pill is filled; hovering a pill reveals its Ctrl+Shift number.\n */\n.tray-spaces {\n  position: relative;\n  display: flex;\n  flex: none;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 4px;\n  margin: 0 0 6px;\n  padding: 0 4px;\n}\n\n.tray-space {\n  display: inline-flex;\n  flex: none;\n  align-items: center;\n  gap: 5px;\n  height: 24px;\n  max-width: 100%;\n  padding: 0 9px;\n  color: var(--dsw-alias-label-secondary);\n  background: none;\n  border: 0.5px solid var(--dsw-alias-border-l2);\n  border-radius: 12px;\n  cursor: pointer;\n  font-size: 12px;\n  line-height: 1;\n  transition: background var(--ds-ease-fast, 120ms), color var(--ds-ease-fast, 120ms);\n}\n\n.tray-space:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-space-active,\n.tray-space-active:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-interactive-bg-hover));\n  border-color: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));\n  font-weight: 600;\n}\n\n.tray-space-label {\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.tray-space-count {\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 11px;\n  font-variant-numeric: tabular-nums;\n}\n\n.tray-space-key {\n  display: none;\n  min-width: 14px;\n  height: 14px;\n  padding: 0 3px;\n  color: var(--dsw-alias-label-tertiary);\n  border: 0.5px solid var(--dsw-alias-border-l2);\n  border-radius: 4px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 13px;\n  text-align: center;\n  font-variant-numeric: tabular-nums;\n}\n\n.tray-space:hover .tray-space-key {\n  display: inline-block;\n}\n\n.tray-space-add {\n  width: 24px;\n  padding: 0;\n  justify-content: center;\n  border-style: dashed;\n  font-size: 13px;\n}\n\n/* Collapsed rail: vertical stack of initials. */\n.tray-spaces-rail {\n  flex-direction: column;\n  flex-wrap: nowrap;\n  padding: 0;\n  margin-top: 6px;\n}\n\n.tray-spaces-rail .tray-space {\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  justify-content: center;\n  border-radius: 8px;\n  font-size: 11px;\n  font-weight: 600;\n}\n\n.tray-space-menu {\n  position: absolute;\n  top: calc(100% + 4px);\n  left: 4px;\n  z-index: 20;\n  display: flex;\n  flex-direction: column;\n  min-width: 160px;\n  padding: 4px;\n  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));\n  border: 0.5px solid var(--dsw-alias-border-l2);\n  border-radius: 10px;\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);\n}\n\n.tray-space-menu-title {\n  padding: 4px 8px 6px;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 11px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.tray-space-menu button {\n  padding: 6px 8px;\n  color: var(--dsw-alias-label-primary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 12px;\n}\n\n.tray-space-menu button:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-space-menu-danger {\n  color: var(--dsw-alias-status-error, #d33) !important;\n}\n\n/* \u2500\u2500 show more / empty / status \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-more {\n  display: block;\n  width: 100%;\n  margin: 0;\n  padding: 4px 8px 4px 30px;\n  color: var(--dsw-alias-label-tertiary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n  font-size: 12px;\n  line-height: 18px;\n}\n\n.tray-more:hover {\n  color: var(--dsw-alias-label-primary);\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-status {\n  padding: 10px 8px;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 13px;\n  line-height: 18px;\n}\n\n/* \u2500\u2500 search results \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-result-row {\n  box-sizing: border-box;\n  display: flex;\n  flex-direction: column;\n  align-items: stretch;\n  width: 100%;\n  min-height: 44px;\n  padding: 4px 8px;\n  color: var(--dsw-alias-label-primary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n}\n\n.tray-result-row:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-result-title {\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.tray-result-meta {\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 17px;\n}\n\n.tray-result-snippet {\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  color: var(--dsw-alias-label-secondary);\n  font-size: 12px;\n  line-height: 17px;\n}\n\n/* \u2500\u2500 settled drawer \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n/*\n * Pinned to the foot of the region, directly above the shell's Settings row,\n * and never scrolls away with the list.\n */\n.tray-settled {\n  flex: none;\n  margin-top: 4px;\n  padding-top: 4px;\n  border-top: 0.5px solid var(--dsw-alias-border-l1);\n}\n\n.tray-settled-header {\n  box-sizing: border-box;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  width: 100%;\n  height: 32px;\n  padding: 0 8px;\n  color: var(--dsw-alias-label-secondary);\n  text-align: left;\n  background: none;\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n}\n\n.tray-settled-header:hover {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n.tray-settled-label {\n  flex: 1;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  font-size: 13px;\n  line-height: 20px;\n}\n\n.tray-settled-count {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  font-size: 12px;\n  line-height: 20px;\n}\n\n.tray-settled-list {\n  max-height: 40vh;\n  overflow-y: auto;\n}\n\n.tray-settled-row .tray-session-title {\n  color: var(--dsw-alias-label-secondary);\n}\n\n/* \u2500\u2500 rail (collapsed sidebar) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-rail .tray-header {\n  justify-content: flex-start;\n  margin-bottom: 12px;\n  padding-left: 0;\n}\n\n.tray-rail .tray-icon-button {\n  width: 36px;\n  height: 36px;\n  color: var(--dsw-alias-label-primary);\n}\n\n/* \u2500\u2500 environment child workspaces (nested under their project) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n\n.tray-group-nested {\n  margin-left: 14px;\n  padding-left: 6px;\n  border-left: 1px solid var(--dsw-alias-border-l2);\n}\n\n.tray-env-dot {\n  display: inline-block;\n  flex: none;\n  width: 6px;\n  height: 6px;\n  margin-right: 6px;\n  border-radius: 50%;\n  background: var(--dsw-alias-label-tertiary);\n}\n\n.tray-env-dot-running {\n  background: #3fb950;\n  box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.2);\n}\n";
 
 // src/client.jsx
 var SEARCH_DEBOUNCE_MS = 200;
@@ -850,90 +850,103 @@ Enter a number:`);
       }
     }
   } else {
+    const childrenOf = /* @__PURE__ */ new Map();
+    const topLevel = [];
     for (const group of groups) {
+      const parent = group.workspaceId === void 0 ? void 0 : envParents[group.workspaceId];
+      if (parent !== void 0 && groups.some((g) => g.workspaceId === parent)) {
+        if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+        childrenOf.get(parent).push(group);
+      } else topLevel.push(group);
+    }
+    const renderGroup = (group, nested) => {
       const label = group.label || workspaceLabel(group.cwd) || "Ungrouped";
-      body.push(
+      const env = nested && group.workspaceId !== void 0 ? window.__dshEnv__?.envForWorkspace(group.workspaceId) : void 0;
+      return React.createElement(
+        "div",
+        { className: `tray-group${nested ? " tray-group-nested" : ""}`, key: `group-${group.key || "ungrouped"}` },
         React.createElement(
           "div",
-          { className: "tray-group", key: `group-${group.key || "ungrouped"}` },
+          {
+            className: "tray-project-row",
+            onClick: () => toggleGroup(group.key),
+            title: group.cwd ?? label
+          },
           React.createElement(
-            "div",
-            {
-              className: "tray-project-row",
-              onClick: () => toggleGroup(group.key),
-              title: group.cwd ?? label
-            },
+            "span",
+            { className: `tray-arrow${group.expanded ? " tray-arrow-open" : ""}`, "aria-hidden": "true" },
+            "\u25B6"
+          ),
+          env !== void 0 ? React.createElement("span", { className: `tray-env-dot tray-env-dot-${env.state}`, "aria-hidden": "true", title: env.state }) : null,
+          React.createElement("span", { className: "tray-project-label" }, nested ? label.replace(/^.*\u00B7\s*/, "") : label),
+          React.createElement("span", { className: "tray-project-count" }, String(group.sessionCount)),
+          group.workspaceId === void 0 ? null : React.createElement(
+            "span",
+            { className: "tray-row-actions" },
+            spaces.length > 1 && !nested ? React.createElement(
+              "button",
+              {
+                type: "button",
+                className: "tray-row-button",
+                title: `Move ${label} to another space`,
+                "aria-label": `Move ${label} to another space`,
+                onClick: (event) => {
+                  event.stopPropagation();
+                  moveWorkspaceToSpace(group.workspaceId);
+                }
+              },
+              "\u2937"
+            ) : null,
             React.createElement(
-              "span",
-              { className: `tray-arrow${group.expanded ? " tray-arrow-open" : ""}`, "aria-hidden": "true" },
-              "\u25B6"
-            ),
-            React.createElement("span", { className: "tray-project-label" }, label),
-            React.createElement("span", { className: "tray-project-count" }, String(group.sessionCount)),
-            group.workspaceId === void 0 ? null : React.createElement(
-              "span",
-              { className: "tray-row-actions" },
-              spaces.length > 1 ? React.createElement(
-                "button",
-                {
-                  type: "button",
-                  className: "tray-row-button",
-                  title: `Move ${label} to another space`,
-                  "aria-label": `Move ${label} to another space`,
-                  onClick: (event) => {
-                    event.stopPropagation();
-                    moveWorkspaceToSpace(group.workspaceId);
-                  }
-                },
-                "\u2937"
-              ) : null,
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  className: "tray-row-button",
-                  title: `New session in ${label}`,
-                  "aria-label": `New session in ${label}`,
-                  onClick: (event) => {
-                    event.stopPropagation();
-                    tray.startSession(group.workspaceId);
-                  }
-                },
-                "\uFF0B"
-              )
+              "button",
+              {
+                type: "button",
+                className: "tray-row-button",
+                title: `New session in ${label}`,
+                "aria-label": `New session in ${label}`,
+                onClick: (event) => {
+                  event.stopPropagation();
+                  tray.startSession(group.workspaceId);
+                }
+              },
+              "\uFF0B"
             )
-          ),
-          ...group.sessions.map(
-            (node) => React.createElement(SessionRow, {
-              React,
-              key: node.id,
-              node,
-              selected: node.id === list.current,
-              now,
-              onOpen: tray.open,
-              onSettle: tray.settle,
-              onRename: tray.renameSession,
-              onFork: tray.forkSession,
-              onArchive: tray.archiveSession
-            })
-          ),
-          group.hiddenCount > 0 ? React.createElement(
-            "button",
-            {
-              type: "button",
-              className: "tray-more",
-              key: "more",
-              onClick: () => toggleShowAll(group.key)
-            },
-            `Show ${group.hiddenCount} more`
-          ) : null,
-          group.showingAll && group.expanded && group.sessionCount > settled.sessionsPerWorkspace ? React.createElement(
-            "button",
-            { type: "button", className: "tray-more", key: "less", onClick: () => toggleShowAll(group.key) },
-            "Show less"
-          ) : null
-        )
+          )
+        ),
+        ...group.sessions.map(
+          (node) => React.createElement(SessionRow, {
+            React,
+            key: node.id,
+            node,
+            selected: node.id === list.current,
+            now,
+            onOpen: tray.open,
+            onSettle: (id) => tray.settle(id, list.byId?.[id]?.cwd),
+            onRename: tray.renameSession,
+            onFork: tray.forkSession,
+            onArchive: tray.archiveSession
+          })
+        ),
+        group.hiddenCount > 0 ? React.createElement(
+          "button",
+          {
+            type: "button",
+            className: "tray-more",
+            key: "more",
+            onClick: () => toggleShowAll(group.key)
+          },
+          `Show ${group.hiddenCount} more`
+        ) : null,
+        group.showingAll && group.expanded && group.sessionCount > settled.sessionsPerWorkspace ? React.createElement(
+          "button",
+          { type: "button", className: "tray-more", key: "less", onClick: () => toggleShowAll(group.key) },
+          "Show less"
+        ) : null
       );
+    };
+    for (const group of topLevel) {
+      body.push(renderGroup(group, false));
+      for (const child of childrenOf.get(group.workspaceId) ?? []) body.push(renderGroup(child, true));
     }
     if (groups.length === 0) {
       body.push(
@@ -1056,7 +1069,7 @@ Enter a number:`);
                   "aria-label": `Unsettle ${row.title}`,
                   onClick: (event) => {
                     event.stopPropagation();
-                    tray.unsettle(row.id);
+                    tray.unsettle(row.id, list.byId?.[row.id]?.cwd);
                   }
                 },
                 "\u21A9"
@@ -1102,9 +1115,32 @@ function apply(ctx) {
     }),
     "sidebar-tray: settings sync"
   );
+  const envBridge = () => window.__dshEnv__;
   const tray = {
     open: (sessionId) => uiWorkspace.openSession(sessionId),
-    startSession: (workspaceId) => uiWorkspace.startSession(workspaceId),
+    /**
+     * New conversation. On an env-enabled project (one with `.agents/env.json`)
+     * this first creates a fresh worktree + child workspace and starts the
+     * session there — the environment itself stays stopped until the user
+     * presses Start in the header. A worktree that is already an env child
+     * gets an ordinary session in place.
+     */
+    startSession: async (workspaceId) => {
+      const bridge = envBridge();
+      if (workspaceId !== void 0 && bridge?.isEnvProject(workspaceId) && bridge.envForWorkspace(workspaceId) === void 0) {
+        try {
+          const env = await bridge.createForWorkspace(workspaceId);
+          if (env?.childWorkspaceId) return uiWorkspace.startSession(env.childWorkspaceId);
+        } catch (error) {
+          console.error("[dsh-sidebar-tray] could not create environment, starting in the main checkout", error);
+          window.alert(`Could not create a worktree environment:
+${error?.message ?? error}
+
+Starting the conversation in the main checkout instead.`);
+        }
+      }
+      return uiWorkspace.startSession(workspaceId);
+    },
     forkSession: (sessionId) => {
       Promise.resolve(uiWorkspace.forkSession(sessionId)).catch(() => {
       });
@@ -1122,8 +1158,35 @@ function apply(ctx) {
       Promise.resolve(session?.rename(trimmed)).catch(() => {
       });
     },
-    settle: (sessionId) => settledStore.settle(sessionId),
-    unsettle: (sessionId) => settledStore.unsettle(sessionId),
+    /**
+     * Settling a conversation that lives in a worktree environment stops and
+     * deletes that environment (uncommitted work is committed to its branch,
+     * which is kept). Unsettling restores the worktree from that branch.
+     */
+    settle: (sessionId, cwd) => {
+      settledStore.settle(sessionId);
+      const bridge = envBridge();
+      const env = cwd && bridge ? bridge.envForCwd(cwd) : void 0;
+      if (env !== void 0) {
+        Promise.resolve(bridge.act(env.id, "teardown")).catch((error) => {
+          console.error("[dsh-sidebar-tray] environment teardown failed", error);
+          window.alert(`Conversation settled, but its environment could not be torn down:
+${error?.message ?? error}`);
+        });
+      }
+    },
+    unsettle: (sessionId, cwd) => {
+      settledStore.unsettle(sessionId);
+      const bridge = envBridge();
+      const env = cwd && bridge ? bridge.tornDownFor(cwd) : void 0;
+      if (env !== void 0) {
+        Promise.resolve(bridge.act(env.id, "restore")).catch((error) => {
+          console.error("[dsh-sidebar-tray] environment restore failed", error);
+          window.alert(`Conversation restored, but its environment could not be recreated:
+${error?.message ?? error}`);
+        });
+      }
+    },
     searchSessions: async (query, signal) => {
       const result = await sessions.search(query, signal);
       if (result?.ok !== true) throw new Error(result?.error?.message ?? "search failed");

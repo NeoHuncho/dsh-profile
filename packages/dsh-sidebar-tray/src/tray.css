@@ -570,3 +570,26 @@
   height: 36px;
   color: var(--dsw-alias-label-primary);
 }
+
+/* ── environment child workspaces (nested under their project) ─────────── */
+
+.tray-group-nested {
+  margin-left: 14px;
+  padding-left: 6px;
+  border-left: 1px solid var(--dsw-alias-border-l2);
+}
+
+.tray-env-dot {
+  display: inline-block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-tertiary);
+}
+
+.tray-env-dot-running {
+  background: #3fb950;
+  box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.2);
+}
