@@ -46,10 +46,14 @@ const SettingsSchema = z.object({
       z.object({
         id: z.string(),
         name: z.string(),
+        /** Single emoji shown in the space dock. */
+        emoji: z.string().default('📁'),
         workspaceIds: z.array(z.string()).default([]),
       }),
     )
     .default([]),
+  /** Display of the built-in Default space (it is never stored as a space). */
+  defaultSpace: z.object({ name: z.string().default('Default'), emoji: z.string().default('🏠') }).default({}),
   /** The Space currently shown in the sidebar; `default` is the built-in one. */
   activeSpaceId: z.string().default('default'),
 })

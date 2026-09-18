@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { deriveGroups } from '../src/derive.js'
-import { DEFAULT_SPACE_ID, deriveSpaces, normalizeSpaces, spaceInitials, spaceOfWorkspace } from '../src/spaces.js'
+import { DEFAULT_SPACE_ID, deriveSpaces, normalizeDefaultSpace, normalizeEmoji, normalizeSpaces, spaceInitials, spaceOfWorkspace } from '../src/spaces.js'
 
 const ws = (id) => ({ workspaceId: id, path: `/tmp/${id}`, title: id, sessionIds: [] })
 
@@ -31,9 +31,25 @@ test('normalizeSpaces drops duplicates, the reserved default id and junk', () =>
     { id: 'y', name: '' },
   ])
   assert.deepEqual(out, [
-    { id: 'x', name: 'X', workspaceIds: ['a'] },
-    { id: 'y', name: 'Space', workspaceIds: [] },
+    { id: 'x', name: 'X', emoji: '📁', workspaceIds: ['a'] },
+    { id: 'y', name: 'Space', emoji: '📁', workspaceIds: [] },
   ])
+})
+
+test('normalizeEmoji keeps one symbol (with modifiers) and falls back', () => {
+  assert.equal(normalizeEmoji('🚀'), '🚀')
+  assert.equal(normalizeEmoji('🚀🎨'), '🚀')
+  assert.equal(normalizeEmoji('👩‍💻 dev'), '👩‍💻')
+  assert.equal(normalizeEmoji('🛠️'), '🛠️')
+  assert.equal(normalizeEmoji(''), '📁')
+  assert.equal(normalizeEmoji(undefined, '🏠'), '🏠')
+})
+
+test('deriveSpaces carries emoji and the default-space display', () => {
+  const spaces = normalizeSpaces([{ id: 'w', name: 'Work', emoji: '💼', workspaceIds: [] }])
+  const out = deriveSpaces(spaces, [], { defaultSpace: { name: 'Home', emoji: '🌱' } })
+  assert.deepEqual(out.map((s) => [s.id, s.name, s.emoji]), [['default', 'Home', '🌱'], ['w', 'Work', '💼']])
+  assert.deepEqual(normalizeDefaultSpace(undefined), { name: 'Default', emoji: '🏠' })
 })
 
 test('spaceOfWorkspace and initials', () => {

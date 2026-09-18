@@ -168,7 +168,7 @@ __export(client_exports, {
   inject: () => inject
 });
 module.exports = __toCommonJS(client_exports);
-var import_react4 = __toESM(require("react"), 1);
+var import_react5 = __toESM(require("react"), 1);
 
 // src/client-panel.jsx
 var import_react = __toESM(require("react"), 1);
@@ -10717,6 +10717,31 @@ var envStore = {
   },
   async log(envId) {
     return (await request(`/${envId}/log?lines=200`)).log;
+  },
+  /** Uncommitted changes / unmerged commits in an env worktree. */
+  async dirty(envId) {
+    return request(`/${envId}/dirty`);
+  },
+  /** Env project (workspace id) whose root path is `cwd`; undefined for worktrees and plain projects. */
+  projectForCwd(cwd) {
+    if (!cwd) return void 0;
+    for (const [workspaceId, project] of Object.entries(snapshot.projects)) {
+      if (project.path === cwd && project.error === void 0) return workspaceId;
+    }
+    return void 0;
+  }
+};
+var worktreeChoice = /* @__PURE__ */ new Map();
+var choiceListeners = /* @__PURE__ */ new Set();
+var newWorktreeChoice = {
+  get: (sessionId) => worktreeChoice.get(sessionId) !== false,
+  set(sessionId, value) {
+    worktreeChoice.set(sessionId, value !== false);
+    for (const l of [...choiceListeners]) l();
+  },
+  subscribe(listener) {
+    choiceListeners.add(listener);
+    return () => choiceListeners.delete(listener);
   }
 };
 function installEnvBridge() {
@@ -10727,6 +10752,8 @@ function installEnvBridge() {
     tornDownFor: (cwd) => envStore.tornDownFor(cwd),
     createForWorkspace: (id) => envStore.createForWorkspace(id),
     act: (id, action) => envStore.act(id, action),
+    dirty: (id) => envStore.dirty(id),
+    projectForCwd: (cwd) => envStore.projectForCwd(cwd),
     refresh: () => refreshEnvs()
   };
   const off = envStore.subscribe(() => {
@@ -10781,7 +10808,13 @@ function EnvActions({ sessionId, useSessions, cwd: explicitCwd }) {
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dshEnvActions", role: "group", "aria-label": "Environment", title, children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: `dshEnvDot dshEnvDot-${env ? env.state : "torn-down"}`, "aria-hidden": "true" }),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "dshEnvSlug", children: env?.slug ?? tornDown.slug }),
-      tornDown ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dshEnvButton", disabled: busy !== "", onClick: () => act("restore"), children: busy === "restore" ? "Restoring\u2026" : "Restore environment" }) : env.state === "running" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+      tornDown ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dshEnvButton", disabled: busy !== "", onClick: () => act("restore"), children: busy === "restore" ? "Restoring\u2026" : "Restore environment" }) : env.state === "preparing" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "dshEnvPreparing", title: "Setup script is running (installs, database\u2026). Start becomes available when it finishes.", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "dshEnvSpinner", "aria-hidden": "true" }),
+        "Preparing environment\u2026"
+      ] }) : env.state === "setup-failed" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "dshEnvFailed", title: env.lastError ?? "setup failed", children: "Setup failed" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dshEnvButton", disabled: busy !== "", onClick: () => act("retry-setup"), children: busy === "retry-setup" ? "Retrying\u2026" : "Retry setup" })
+      ] }) : env.state === "running" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
         ports ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "dshEnvPorts", children: env.ports.map((p) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("a", { href: `http://localhost:${p}`, target: "_blank", rel: "noreferrer", children: [
           ":",
           p
@@ -10809,14 +10842,96 @@ function EnvActions({ sessionId, useSessions, cwd: explicitCwd }) {
   ] });
 }
 
+// src/env-new-worktree.jsx
+var import_react4 = __toESM(require("react"), 1);
+var import_jsx_runtime4 = require("react/jsx-runtime");
+function EnvNewWorktreeToggle({ sessionId, blank, cwd }) {
+  (0, import_react4.useSyncExternalStore)(envStore.subscribe, envStore.getSnapshot);
+  const checked = (0, import_react4.useSyncExternalStore)(newWorktreeChoice.subscribe, () => newWorktreeChoice.get(sessionId));
+  const projectId = blank && cwd ? envStore.projectForCwd(cwd) : void 0;
+  if (projectId === void 0 || !sessionId) return null;
+  const project = envStore.getSnapshot().projects[projectId];
+  const label = project?.label ?? "worktree";
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "dshEnvNewWorktree", title: "Your first message creates a fresh git worktree (own branch, ports and database) and the conversation continues there. Untick to work directly in the main checkout.", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "checkbox", checked, onChange: (event) => newWorktreeChoice.set(sessionId, event.target.checked) }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { children: [
+      "Start on a new ",
+      label === "worktree" ? "worktree" : `${label} worktree`
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dshEnvNewWorktreeHint", children: checked ? "created when you send your first message" : "working in the main checkout" })
+  ] });
+}
+
+// src/first-prompt-worktree.js
+function installFirstPromptWorktree(ctx) {
+  const conversation = ctx.get("conversation");
+  const sessions = ctx.get("sessions");
+  const uiWorkspace = ctx.get("uiWorkspace");
+  if (conversation === void 0 || sessions === void 0 || uiWorkspace === void 0) {
+    console.warn("[workspace-console] first-prompt worktree hop unavailable (conversation/sessions/uiWorkspace missing)");
+    return () => {
+    };
+  }
+  const original = conversation.sendSession;
+  if (typeof original !== "function") return () => {
+  };
+  const hops = /* @__PURE__ */ new Map();
+  async function hop(sourceId, projectWorkspaceId) {
+    const inflight2 = hops.get(sourceId);
+    if (inflight2 !== void 0) return inflight2;
+    const attempt = (async () => {
+      const env = await envStore.createForWorkspace(projectWorkspaceId);
+      if (!env?.childWorkspaceId) throw new Error("environment was created without a workspace");
+      const targetId = await sessions.create({ workspaceId: env.childWorkspaceId, cwd: env.dir });
+      return targetId;
+    })();
+    hops.set(sourceId, attempt);
+    attempt.catch(() => hops.delete(sourceId));
+    return attempt;
+  }
+  async function sendSession(session, text, attachmentIds, mode, signal) {
+    const sourceId = session?.sessionId;
+    const summary = sourceId ? sessions.list.getSnapshot()?.byId?.[sourceId] : void 0;
+    const projectWorkspaceId = summary?.blank ? envStore.projectForCwd(summary.cwd) : void 0;
+    if (projectWorkspaceId === void 0 || !newWorktreeChoice.get(sourceId)) {
+      return original.call(conversation, session, text, attachmentIds, mode, signal);
+    }
+    let targetId;
+    try {
+      targetId = await hop(sourceId, projectWorkspaceId);
+    } catch (error) {
+      const message = String(error?.message ?? error);
+      window.alert(`Could not create a worktree environment:
+${message}
+
+Your message was not sent. Untick "Start on a new worktree" to work in the main checkout instead.`);
+      throw new Error(`worktree environment: ${message}`);
+    }
+    const target = sessions.binding(targetId)?.session;
+    if (target === void 0) throw new Error("worktree environment: new session has no binding yet, please send again");
+    if (attachmentIds.length > 0) conversation.rebindDraftFiles(targetId, attachmentIds);
+    const outcome = await original.call(conversation, target, text, attachmentIds, mode, signal);
+    if (outcome?.kind === "success") {
+      uiWorkspace.openSession(targetId);
+      void refreshEnvs();
+    }
+    return outcome;
+  }
+  conversation.sendSession = sendSession;
+  return () => {
+    if (conversation.sendSession === sendSession) conversation.sendSession = original;
+    hops.clear();
+  };
+}
+
 // raw-css:/Users/williamguinaudie/.dsh/profiles/web/packages/dsh-workspace-console/src/panel.css
 var panel_default = "/*\n * The dock is portalled in as the LAST flex child of the conversation column,\n * so `flex: none` plus an explicit height makes the transcript above it shrink:\n * the chat is pushed up rather than covered. Staying `relative` (not `fixed`)\n * is what keeps it in flow.\n */\n.dshNtRoot {\n  position: relative;\n  z-index: 1;\n  display: flex;\n  flex: none;\n  flex-direction: column;\n  width: 100%;\n  min-height: 120px;\n  background: var(--dsw-alias-bg-l1, #1e1e1e);\n  border-top: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.22));\n  font-family: var(--dsw-font-family, system-ui, sans-serif);\n}\n\n.dshNtResize {\n  position: absolute;\n  top: -3px;\n  left: 0;\n  right: 0;\n  height: 6px;\n  cursor: ns-resize;\n  z-index: 2;\n}\n.dshNtResize:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.25));\n}\n\n.dshNtBar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  padding: 4px 8px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.2));\n  flex: none;\n}\n\n.dshNtTabs,\n.dshNtActions {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  min-width: 0;\n}\n.dshNtTabs {\n  overflow-x: auto;\n  scrollbar-width: none;\n}\n.dshNtTabs::-webkit-scrollbar {\n  display: none;\n}\n\n.dshNtTab {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  height: 26px;\n  padding: 0 10px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 12px;\n  white-space: nowrap;\n  cursor: pointer;\n}\n.dshNtTab:hover {\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.15));\n}\n.dshNtTabActive {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.22));\n}\n.dshNtTabCount {\n  font-size: 10px;\n  padding: 0 5px;\n  border-radius: 999px;\n  background: var(--dsw-alias-fill-l3, rgba(128, 128, 128, 0.3));\n}\n\n.dshNtIconBtn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n}\n.dshNtIconBtn:hover {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n.dshNtBody {\n  flex: 1;\n  min-height: 0;\n  display: flex;\n}\n\n.dshNtSplit {\n  display: flex;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n}\n.dshNtSplitHalf {\n  display: flex;\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.dshNtHandle {\n  flex: none;\n  background: var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.25));\n}\n.dshNtHandleV {\n  width: 3px;\n  cursor: col-resize;\n}\n.dshNtHandleH {\n  height: 3px;\n  cursor: row-resize;\n}\n.dshNtHandle:hover {\n  background: var(--dsw-alias-label-tertiary, #9aa0a6);\n}\n\n.dshNtPane {\n  position: relative;\n  flex: 1;\n  min-width: 0;\n  min-height: 0;\n  padding: 6px 4px 6px 10px;\n  box-sizing: border-box;\n  overflow: hidden;\n}\n\n/*\n * Only mark the focused pane when the tab is actually split. A lone pane with a\n * box drawn round it reads as a widget rather than a terminal.\n */\n.dshNtSplit .dshNtPaneFocused::after {\n  content: '';\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  border: 1px solid var(--dsw-alias-label-tertiary, rgba(154, 160, 166, 0.5));\n  border-radius: 4px;\n}\n.dshNtPaneBody {\n  width: 100%;\n  height: 100%;\n}\n\n.dshNtEmpty {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n.dshNtEmptyBtn {\n  padding: 8px 16px;\n  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.3));\n  border-radius: 8px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  font-size: 13px;\n  cursor: pointer;\n}\n.dshNtEmptyBtn:hover {\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n}\n\n/*\n * Terminal surface.\n *\n * xterm draws its own text layer; these rules only remove the chrome that made\n * the panel read as a web widget rather than a terminal. The scrollbar is\n * styled to match the app instead of showing the platform default inside an\n * otherwise dark surface.\n */\n.dshNtPaneBody .xterm {\n  height: 100%;\n  padding: 0;\n}\n.dshNtPaneBody .xterm-viewport {\n  background: transparent !important;\n  scrollbar-width: thin;\n  scrollbar-color: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35)) transparent;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar {\n  width: 9px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-thumb {\n  background: var(--dsw-alias-scrollbar-bg-l2, rgba(128, 128, 128, 0.35));\n  border-radius: 999px;\n}\n.dshNtPaneBody .xterm-viewport::-webkit-scrollbar-track {\n  background: transparent;\n}\n/* The focus outline belongs to the pane, not to xterm's inner textarea. */\n.dshNtPaneBody .xterm:focus,\n.dshNtPaneBody .xterm textarea:focus {\n  outline: none;\n}\n\n/* Shortcut legend: a hover/focus card listing the current bindings. */\n.dshNtHelp {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  border-radius: 6px;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  font-size: 12px;\n  cursor: default;\n  user-select: none;\n}\n.dshNtHelp:hover,\n.dshNtHelp:focus-visible {\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.2));\n  outline: none;\n}\n.dshNtHelpCard {\n  position: absolute;\n  right: 0;\n  bottom: calc(100% + 6px);\n  z-index: 30;\n  display: none;\n  min-width: 210px;\n  padding: 8px 10px;\n  border-radius: 10px;\n  background: var(--dsw-specific-menu, #2a2a2a);\n  box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0, 0, 0, 0.35));\n  border: 1px solid var(--dsw-alias-border-l1, rgba(128, 128, 128, 0.25));\n}\n.dshNtHelp:hover .dshNtHelpCard,\n.dshNtHelp:focus-visible .dshNtHelpCard,\n.dshNtHelp:focus-within .dshNtHelpCard {\n  display: block;\n}\n.dshNtHelpTitle {\n  margin-bottom: 6px;\n  font-size: 11px;\n  font-weight: 600;\n  color: var(--dsw-alias-label-tertiary, #9aa0a6);\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n}\n.dshNtHelpRow {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 16px;\n  padding: 2px 0;\n  font-size: 12px;\n  color: var(--dsw-alias-label-secondary, #c8cdd2);\n  white-space: nowrap;\n}\n.dshNtHelpRow kbd {\n  padding: 1px 6px;\n  border-radius: 5px;\n  background: var(--dsw-alias-fill-l2, rgba(128, 128, 128, 0.22));\n  color: var(--dsw-alias-label-primary, #e8eaed);\n  font-family: var(--dsw-font-mono, ui-monospace, monospace);\n  font-size: 11px;\n}\n";
 
 // raw-css:/Users/williamguinaudie/.dsh/profiles/web/packages/dsh-workspace-console/src/workspace-actions.css
-var workspace_actions_default = ".dshWorkspaceActions{display:inline-flex;align-items:center;gap:4px;max-width:min(55vw,680px);overflow-x:auto;scrollbar-width:none}.dshWorkspaceActions::-webkit-scrollbar{display:none}.dshWorkspaceActions-hero{position:fixed;top:14px;right:18px;z-index:25;max-width:min(70vw,760px)}.dshWorkspaceAction{display:inline-flex;align-items:center;gap:5px;min-width:0;height:30px;padding:4px 9px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.35));border-radius:15px;background:var(--dsw-alias-bg-l1,rgba(24,24,24,.92));color:var(--dsw-alias-label-primary,#e8eaed);font:inherit;font-size:11px;white-space:nowrap;cursor:pointer}.dshWorkspaceAction:hover,.dshWorkspaceAction:focus-visible{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))}.dshWorkspaceAction:active{background:var(--dsw-alias-interactive-bg-pressed,rgba(128,128,128,.24))}.dshWorkspaceActionIcon{color:var(--dsw-alias-state-business-primary,#6e8cff);font-size:10px}.dshWorkspaceAction kbd{opacity:.62;font-size:9px}.dshWorkspaceActionEdit{border-style:dashed;color:var(--dsw-alias-label-secondary,#b8bbc2)}.dshWaBackdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.56);backdrop-filter:blur(5px)}.dshWaEditor{box-sizing:border-box;width:min(760px,100%);max-height:min(760px,calc(100vh - 48px));display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.4));border-radius:16px;background:var(--dsw-alias-bg-l1,#202124);color:var(--dsw-alias-label-primary,#eee);box-shadow:0 24px 80px rgba(0,0,0,.4)}.dshWaEditor header,.dshWaEditor footer{display:flex;align-items:center;gap:8px}.dshWaEditor header>div{flex:1}.dshWaEditor h2{margin:0 0 4px;font-size:18px}.dshWaEditor p{margin:0;color:var(--dsw-alias-label-secondary,#aaa);font-size:12px}.dshWaEditor button,.dshWaEditor input{font:inherit}.dshWaEditor button{min-height:30px;padding:5px 10px;border:1px solid var(--dsw-alias-border-l3,#555);border-radius:8px;background:transparent;color:inherit;cursor:pointer}.dshWaRows{display:flex;flex-direction:column;gap:10px;overflow:auto}.dshWaRow{display:grid;grid-template-columns:1fr 2fr 1fr .7fr auto;gap:8px;margin:0;padding:10px;border:1px solid var(--dsw-alias-border-l3,#444);border-radius:10px}.dshWaRow legend{font-size:11px;color:var(--dsw-alias-label-secondary,#aaa)}.dshWaRow label{display:flex;flex-direction:column;gap:4px;font-size:10px;color:var(--dsw-alias-label-secondary,#aaa)}.dshWaRow input{box-sizing:border-box;width:100%;height:32px;padding:5px 8px;border:1px solid var(--dsw-alias-border-l3,#555);border-radius:7px;background:var(--dsw-alias-bg-l2,#18191b);color:var(--dsw-alias-label-primary,#eee)}.dshWaDanger{align-self:end;color:#ff8a80!important}.dshWaAdvice{padding:10px;border-radius:9px;background:var(--dsw-specific-tip,rgba(100,110,160,.16));font-size:11px;line-height:1.7}.dshWaAdvice kbd{margin-left:6px}.dshWaEditor footer span{flex:1}.dshWaPrimary{background:var(--dsw-alias-state-business-primary,#597cff)!important;color:white!important}.dshWaError,.dshWaInlineError{color:#ff8a80;font-size:11px}.dshWaEmpty{text-align:center;padding:24px}.dshWaChordOverlay{position:fixed;z-index:10001;left:50%;top:72px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l2,#555);border-radius:12px;background:var(--dsw-alias-bg-l1,#202124);color:var(--dsw-alias-label-primary,#eee);box-shadow:0 12px 44px rgba(0,0,0,.35)}.dshWaChordOverlay>span{color:var(--dsw-alias-label-secondary,#aaa);font-size:11px}.dshWaChordOverlay button{display:flex;align-items:center;gap:6px;padding:6px 9px;border:0;border-radius:7px;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.14));color:inherit;cursor:pointer}.dshWaChordOverlay kbd{font-weight:700}@media(max-width:700px){.dshWorkspaceActions-hero{top:8px;right:8px;max-width:calc(100vw - 16px)}.dshWorkspaceAction kbd{display:none}.dshWaRow{grid-template-columns:1fr}.dshWaDanger{align-self:auto}}\n\n/* \u2500\u2500 worktree environments \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.dshEnvActions{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 8px 0 9px;margin-right:6px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.35));border-radius:15px;background:var(--dsw-alias-bg-l1,rgba(24,24,24,.92));font-size:11px;white-space:nowrap}\n.dshEnvDot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-label-tertiary,#888)}\n.dshEnvDot-running{background:#3fb950;box-shadow:0 0 0 3px rgba(63,185,80,.18)}\n.dshEnvDot-torn-down{background:transparent;border:1px solid var(--dsw-alias-label-tertiary,#888);box-sizing:border-box}\n.dshEnvSlug{color:var(--dsw-alias-label-secondary,#b8bbc2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px}\n.dshEnvPorts{display:inline-flex;gap:4px}.dshEnvPorts a{color:var(--dsw-alias-state-business-primary,#6e8cff);text-decoration:none;font-family:ui-monospace,Menlo,monospace;font-size:10.5px}.dshEnvPorts a:hover{text-decoration:underline}\n.dshEnvButton{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.35));border-radius:11px;background:transparent;color:var(--dsw-alias-label-primary,#e8eaed);font:inherit;font-size:11px;cursor:pointer}\n.dshEnvButton:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))}\n.dshEnvButton:disabled{opacity:.55;cursor:default}\n.dshEnvButton-start{background:var(--dsw-alias-state-business-primary,#597cff);border-color:transparent;color:#fff;font-weight:600}\n.dshEnvButton-start:hover{filter:brightness(1.1);background:var(--dsw-alias-state-business-primary,#597cff)}\n.dshEnvButton-stop{color:#ff8a80}\n.dshEnvButton-quiet{border-color:transparent;color:var(--dsw-alias-label-tertiary,#888);padding:0 4px}\n.dshEnvError{color:#ff8a80}\n.dshEnvLog pre{flex:1;margin:0;overflow:auto;padding:10px;border-radius:9px;background:var(--dsw-alias-bg-l2,#18191b);font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-all}\n@media(max-width:700px){.dshEnvSlug,.dshEnvPorts{display:none}}\n";
+var workspace_actions_default = ".dshWorkspaceActions{display:inline-flex;align-items:center;gap:4px;max-width:min(55vw,680px);overflow-x:auto;scrollbar-width:none}.dshWorkspaceActions::-webkit-scrollbar{display:none}.dshWorkspaceActions-hero{position:fixed;top:14px;right:18px;z-index:25;max-width:min(70vw,760px)}.dshWorkspaceAction{display:inline-flex;align-items:center;gap:5px;min-width:0;height:30px;padding:4px 9px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.35));border-radius:15px;background:var(--dsw-alias-bg-l1,rgba(24,24,24,.92));color:var(--dsw-alias-label-primary,#e8eaed);font:inherit;font-size:11px;white-space:nowrap;cursor:pointer}.dshWorkspaceAction:hover,.dshWorkspaceAction:focus-visible{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))}.dshWorkspaceAction:active{background:var(--dsw-alias-interactive-bg-pressed,rgba(128,128,128,.24))}.dshWorkspaceActionIcon{color:var(--dsw-alias-state-business-primary,#6e8cff);font-size:10px}.dshWorkspaceAction kbd{opacity:.62;font-size:9px}.dshWorkspaceActionEdit{border-style:dashed;color:var(--dsw-alias-label-secondary,#b8bbc2)}.dshWaBackdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.56);backdrop-filter:blur(5px)}.dshWaEditor{box-sizing:border-box;width:min(760px,100%);max-height:min(760px,calc(100vh - 48px));display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.4));border-radius:16px;background:var(--dsw-alias-bg-l1,#202124);color:var(--dsw-alias-label-primary,#eee);box-shadow:0 24px 80px rgba(0,0,0,.4)}.dshWaEditor header,.dshWaEditor footer{display:flex;align-items:center;gap:8px}.dshWaEditor header>div{flex:1}.dshWaEditor h2{margin:0 0 4px;font-size:18px}.dshWaEditor p{margin:0;color:var(--dsw-alias-label-secondary,#aaa);font-size:12px}.dshWaEditor button,.dshWaEditor input{font:inherit}.dshWaEditor button{min-height:30px;padding:5px 10px;border:1px solid var(--dsw-alias-border-l3,#555);border-radius:8px;background:transparent;color:inherit;cursor:pointer}.dshWaRows{display:flex;flex-direction:column;gap:10px;overflow:auto}.dshWaRow{display:grid;grid-template-columns:1fr 2fr 1fr .7fr auto;gap:8px;margin:0;padding:10px;border:1px solid var(--dsw-alias-border-l3,#444);border-radius:10px}.dshWaRow legend{font-size:11px;color:var(--dsw-alias-label-secondary,#aaa)}.dshWaRow label{display:flex;flex-direction:column;gap:4px;font-size:10px;color:var(--dsw-alias-label-secondary,#aaa)}.dshWaRow input{box-sizing:border-box;width:100%;height:32px;padding:5px 8px;border:1px solid var(--dsw-alias-border-l3,#555);border-radius:7px;background:var(--dsw-alias-bg-l2,#18191b);color:var(--dsw-alias-label-primary,#eee)}.dshWaDanger{align-self:end;color:#ff8a80!important}.dshWaAdvice{padding:10px;border-radius:9px;background:var(--dsw-specific-tip,rgba(100,110,160,.16));font-size:11px;line-height:1.7}.dshWaAdvice kbd{margin-left:6px}.dshWaEditor footer span{flex:1}.dshWaPrimary{background:var(--dsw-alias-state-business-primary,#597cff)!important;color:white!important}.dshWaError,.dshWaInlineError{color:#ff8a80;font-size:11px}.dshWaEmpty{text-align:center;padding:24px}.dshWaChordOverlay{position:fixed;z-index:10001;left:50%;top:72px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l2,#555);border-radius:12px;background:var(--dsw-alias-bg-l1,#202124);color:var(--dsw-alias-label-primary,#eee);box-shadow:0 12px 44px rgba(0,0,0,.35)}.dshWaChordOverlay>span{color:var(--dsw-alias-label-secondary,#aaa);font-size:11px}.dshWaChordOverlay button{display:flex;align-items:center;gap:6px;padding:6px 9px;border:0;border-radius:7px;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.14));color:inherit;cursor:pointer}.dshWaChordOverlay kbd{font-weight:700}@media(max-width:700px){.dshWorkspaceActions-hero{top:8px;right:8px;max-width:calc(100vw - 16px)}.dshWorkspaceAction kbd{display:none}.dshWaRow{grid-template-columns:1fr}.dshWaDanger{align-self:auto}}\n\n/* \u2500\u2500 worktree environments \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.dshEnvActions{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 8px 0 9px;margin-right:6px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.35));border-radius:15px;background:var(--dsw-alias-bg-l1,rgba(24,24,24,.92));font-size:11px;white-space:nowrap}\n.dshEnvDot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-label-tertiary,#888)}\n.dshEnvDot-running{background:#3fb950;box-shadow:0 0 0 3px rgba(63,185,80,.18)}\n.dshEnvDot-torn-down{background:transparent;border:1px solid var(--dsw-alias-label-tertiary,#888);box-sizing:border-box}\n.dshEnvSlug{color:var(--dsw-alias-label-secondary,#b8bbc2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px}\n.dshEnvPorts{display:inline-flex;gap:4px}.dshEnvPorts a{color:var(--dsw-alias-state-business-primary,#6e8cff);text-decoration:none;font-family:ui-monospace,Menlo,monospace;font-size:10.5px}.dshEnvPorts a:hover{text-decoration:underline}\n.dshEnvButton{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.35));border-radius:11px;background:transparent;color:var(--dsw-alias-label-primary,#e8eaed);font:inherit;font-size:11px;cursor:pointer}\n.dshEnvButton:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))}\n.dshEnvButton:disabled{opacity:.55;cursor:default}\n.dshEnvButton-start{background:var(--dsw-alias-state-business-primary,#597cff);border-color:transparent;color:#fff;font-weight:600}\n.dshEnvButton-start:hover{filter:brightness(1.1);background:var(--dsw-alias-state-business-primary,#597cff)}\n.dshEnvButton-stop{color:#ff8a80}\n.dshEnvButton-quiet{border-color:transparent;color:var(--dsw-alias-label-tertiary,#888);padding:0 4px}\n.dshEnvError{color:#ff8a80}\n.dshEnvLog pre{flex:1;margin:0;overflow:auto;padding:10px;border-radius:9px;background:var(--dsw-alias-bg-l2,#18191b);font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-all}\n@media(max-width:700px){.dshEnvSlug,.dshEnvPorts{display:none}}\n.dshEnvDot-preparing{background:#e3b341;animation:dshEnvPulse 1.2s ease-in-out infinite}\n.dshEnvDot-setup-failed{background:#ff8a80}\n.dshEnvPreparing{display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-secondary,#b8bbc2)}\n.dshEnvSpinner{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(227,179,65,.35);border-top-color:#e3b341;animation:dshEnvSpin .8s linear infinite}\n.dshEnvFailed{color:#ff8a80;font-weight:600}\n@keyframes dshEnvSpin{to{transform:rotate(360deg)}}\n@keyframes dshEnvPulse{50%{opacity:.35}}\n.dshEnvNewWorktree{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:6px 10px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.3));border-radius:10px;background:var(--dsw-alias-bg-l1,rgba(24,24,24,.6));font-size:12px;color:var(--dsw-alias-label-primary,#e8eaed);cursor:pointer;user-select:none}\n.dshEnvNewWorktree input{margin:0;accent-color:var(--dsw-alias-state-business-primary,#597cff)}\n.dshEnvNewWorktreeHint{margin-left:auto;color:var(--dsw-alias-label-tertiary,#888);font-size:11px}\n";
 
 // src/client.jsx
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_jsx_runtime5 = require("react/jsx-runtime");
 var inject = ["slots"];
 function installStyles(id, css) {
   if (typeof document === "undefined") return () => {
@@ -10834,6 +10949,23 @@ function apply(ctx) {
   ctx.effect(() => installStyles("panel", panel_default), "workspace-console: panel styles");
   ctx.effect(() => installStyles("workspace-actions", workspace_actions_default), "workspace-console: workspace action styles");
   ctx.effect(() => installEnvBridge(), "workspace-console: environment bridge");
+  ctx.inject(["conversation", "sessions", "uiWorkspace"], (fctx) => {
+    fctx.effect(() => installFirstPromptWorktree(fctx), "workspace-console: first-prompt worktree hop");
+  });
+  ctx.slots.inject(
+    "conversation.input.dock",
+    () => ctx.slots.register(
+      { name: "conversation.input.dock", id: "env-new-worktree", order: -40 },
+      (props) => {
+        const sessionId = props?.sessionId;
+        const cwd = props?.useSessions?.((store) => {
+          const id = sessionId ?? store?.current;
+          return id === void 0 || id === null ? void 0 : store?.byId?.[id]?.cwd;
+        }) ?? void 0;
+        return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(EnvNewWorktreeToggle, { sessionId, blank: props?.session?.blank === true, cwd });
+      }
+    )
+  );
   ctx.slots.inject(
     "conversation.input.dock",
     () => ctx.slots.register(
@@ -10845,9 +10977,9 @@ function apply(ctx) {
           if (id === void 0 || id === null) return void 0;
           return store?.byId?.[id]?.cwd;
         }) ?? void 0;
-        return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(TerminalPanel, { cwd }),
-          props?.session?.blank ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(WorkspaceActions, { cwd, variant: "hero" }) : null
+        return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(TerminalPanel, { cwd }),
+          props?.session?.blank ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(WorkspaceActions, { cwd, variant: "hero" }) : null
         ] });
       }
     )
@@ -10860,7 +10992,7 @@ function apply(ctx) {
         id: "workspace-actions",
         order: -20
       },
-      (props) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(WorkspaceActions, { ...props })
+      (props) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(WorkspaceActions, { ...props })
     )
   );
   ctx.slots.inject(
@@ -10871,7 +11003,7 @@ function apply(ctx) {
         id: "env-actions",
         order: -30
       },
-      (props) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(EnvActions, { ...props })
+      (props) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(EnvActions, { ...props })
     )
   );
 }

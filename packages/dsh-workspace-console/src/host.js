@@ -295,7 +295,7 @@ export function apply(ctx, config) {
       for (const workspace of ctx.workspaceRegistry.list()) {
         try {
           const described = envs.describeProject(workspace.path)
-          if (described !== undefined) projects[workspace.id] = { path: workspace.path, gitRepo: described.gitRepo, hasStart: described.config.start !== undefined }
+          if (described !== undefined) projects[workspace.id] = { path: workspace.path, gitRepo: described.gitRepo, hasStart: described.config.start !== undefined, label: described.config.label }
         } catch (error) {
           projects[workspace.id] = { path: workspace.path, error: String(error?.message ?? error) }
         }
@@ -308,7 +308,7 @@ export function apply(ctx, config) {
       if (parent === undefined) return json(res, 404, { error: 'unknown workspace' })
       return json(res, 200, { env: await envs.create(parent) })
     }
-    const match = /^\/envs\/([^/]+)(?:\/(start|stop|restart|teardown|restore|forget|log))?$/.exec(route)
+    const match = /^\/envs\/([^/]+)(?:\/(start|stop|restart|teardown|restore|forget|log|dirty|retry-setup))?$/.exec(route)
     if (match === null) return false
     const [, id, action] = match
     if (req.method === 'GET' && action === undefined) {
@@ -316,8 +316,10 @@ export function apply(ctx, config) {
       return env === undefined ? json(res, 404, { error: 'unknown environment' }) : json(res, 200, { env })
     }
     if (req.method === 'GET' && action === 'log') return json(res, 200, { log: envs.logTail(id, Number(url.searchParams.get('lines')) || 200) })
-    if (req.method === 'POST' && action !== undefined && action !== 'log') {
+    if (req.method === 'GET' && action === 'dirty') return json(res, 200, envs.dirty(id))
+    if (req.method === 'POST' && action !== undefined && action !== 'log' && action !== 'dirty') {
       if (action === 'forget') { envs.forget(id); return json(res, 200, { ok: true }) }
+      if (action === 'retry-setup') return json(res, 200, { env: await envs.retrySetup(id) })
       return json(res, 200, { env: await envs[action](id) })
     }
     return false

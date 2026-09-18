@@ -6,7 +6,10 @@
  * the workspace registry so sessions attach to it normally), a block of ports
  * allocated by increment, and optional setup/start/stop/teardown scripts.
  *
- * Nothing starts on creation: `start` runs only when the user presses Start.
+ * Creation happens when the first prompt of a conversation is sent (not when
+ * the conversation is opened). The setup script then runs in the background
+ * (`preparing` → `stopped` | `setup-failed`); `start` runs only when the user
+ * presses Start.
  * Settling a conversation tears its environment down (uncommitted work is
  * committed to the env branch, which is kept forever; the worktree directory
  * and the child workspace disappear). Unsettling restores it from the branch.
@@ -135,6 +138,17 @@ export function createEnvEngine(deps) {
   /** Re-derive `running` from the real world and persist a state change. */
   function refresh(env) {
     if (env.state === 'torn-down') return env
+    if (env.state === 'preparing') {
+      // Setup runs detached from the request; a harness restart orphans it.
+      if (!pidAlive(env.setupPid) && !setupWatched.has(env.id)) {
+        env.state = 'setup-failed'
+        env.setupPid = undefined
+        env.lastError = 'setup was interrupted (harness restarted); retry it'
+        registry.put(env)
+      }
+      return env
+    }
+    if (env.state === 'setup-failed') return env
     const alive = pidAlive(env.pid) || (env.healthPortValue !== undefined && portListening(env.healthPortValue))
     const next = alive ? 'running' : env.state === 'created' ? 'created' : 'stopped'
     if (next !== env.state || (!alive && env.pid)) {
@@ -143,6 +157,73 @@ export function createEnvEngine(deps) {
       registry.put(env)
     }
     return env
+  }
+
+  /** Env ids whose setup child process is owned by this harness process. */
+  const setupWatched = new Set()
+
+  /**
+   * Run the setup script in the background. The env is `preparing` until it
+   * exits: 0 → `stopped` (ready to Start), otherwise `setup-failed` with the
+   * log tail in `lastError`.
+   */
+  function runSetupAsync(env, config) {
+    if (!config.setup) {
+      env.state = 'stopped'
+      env.setupPid = undefined
+      env.lastError = undefined
+      registry.put(env)
+      changed()
+      return
+    }
+    mkdirSync(logDir, { recursive: true })
+    const log = join(logDir, `${env.id}.log`)
+    const fd = openSync(log, 'a')
+    writeFileSync(fd, `\n=== setup ${new Date().toISOString()} ===\n`)
+    const [cmd, ...args] = scriptArgv(config.setup)
+    const child = spawn(cmd, args, {
+      cwd: env.dir,
+      env: { ...process.env, ...envVars(env) },
+      stdio: ['ignore', fd, fd],
+      detached: true,
+    })
+    closeSync(fd)
+    child.unref()
+    env.state = 'preparing'
+    env.setupPid = child.pid
+    env.lastError = undefined
+    registry.put(env)
+    setupWatched.add(env.id)
+    changed()
+    const timer = setTimeout(() => { try { process.kill(-child.pid, 'SIGKILL') } catch { /* gone */ } }, 15 * 60 * 1000)
+    child.on('exit', (code, signal) => {
+      clearTimeout(timer)
+      setupWatched.delete(env.id)
+      const current = registry.get(env.id)
+      if (current === undefined || current.state !== 'preparing') return
+      current.setupPid = undefined
+      if (code === 0) {
+        current.state = 'stopped'
+        current.lastError = undefined
+      } else {
+        current.state = 'setup-failed'
+        let tail = ''
+        try { tail = readFileSync(log, 'utf8').split('\n').slice(-12).join('\n') } catch { /* no log */ }
+        current.lastError = `setup script failed (exit ${code ?? signal})\n${tail}`
+      }
+      registry.put(current)
+      changed()
+    })
+    child.on('error', (error) => {
+      setupWatched.delete(env.id)
+      const current = registry.get(env.id)
+      if (current === undefined) return
+      current.state = 'setup-failed'
+      current.setupPid = undefined
+      current.lastError = `setup could not start: ${error?.message ?? error}`
+      registry.put(current)
+      changed()
+    })
   }
 
   function envVars(env) {
@@ -228,8 +309,20 @@ export function createEnvEngine(deps) {
   }
 
   function view(env) {
-    const { pid, ...rest } = env
+    const { pid, setupPid, ...rest } = env
     return { ...rest, running: env.state === 'running', pid }
+  }
+
+  /** Uncommitted / unmerged work in a worktree, for the settle warning. */
+  function dirtyInfo(env) {
+    if (!existsSync(env.dir)) return { dirty: false, ahead: 0, summary: '' }
+    const status = git(env.dir, ['status', '--porcelain'], { allowFailure: true }).stdout.split('\n').filter(Boolean)
+    const parentHead = git(env.parentPath, ['rev-parse', 'HEAD'], { allowFailure: true }).stdout.trim()
+    const aheadOut = parentHead ? git(env.dir, ['rev-list', '--count', `${parentHead}..HEAD`], { allowFailure: true }).stdout.trim() : '0'
+    const ahead = Number(aheadOut) || 0
+    const lines = status.slice(0, 10)
+    if (status.length > 10) lines.push(`… and ${status.length - 10} more`)
+    return { dirty: status.length > 0, ahead, summary: lines.join('\n') }
   }
 
   return {
@@ -288,7 +381,6 @@ export function createEnvEngine(deps) {
         shareInto(env, config)
         excludeShares(env, config)
         registry.put(env)
-        runScript(env, config.setup, 'setup')
       } catch (error) {
         git(parentPath, ['worktree', 'remove', '--force', dir], { allowFailure: true })
         git(parentPath, ['branch', '-D', branch], { allowFailure: true })
@@ -299,6 +391,9 @@ export function createEnvEngine(deps) {
       const child = await deps.workspaceRegistry.create(dir, `${parentWorkspace.title || basename(parentPath)} · ${slug}`)
       env.childWorkspaceId = child.id
       registry.put(env)
+      // Setup (installs, DB creation…) can take minutes: run it in the
+      // background so the conversation can start right away.
+      runSetupAsync(env, config)
       // A new workspace is prepended; keep it right after its parent instead.
       try {
         const order = deps.workspaceRegistry.list().map((w) => w.id)
@@ -317,6 +412,8 @@ export function createEnvEngine(deps) {
       if (env === undefined) throw new Error('unknown environment')
       if (env.state === 'torn-down') throw new Error('environment is torn down; restore it first')
       refresh(env)
+      if (env.state === 'preparing') throw new Error('environment is still being prepared')
+      if (env.state === 'setup-failed') throw new Error('environment setup failed; retry setup first')
       if (env.state === 'running') return view(env)
       const config = readEnvConfig(env.parentPath)
       if (config?.start === undefined) throw new Error(`${ENV_FILE} defines no start script`)
@@ -355,6 +452,11 @@ export function createEnvEngine(deps) {
       const env = registry.get(envId)
       if (env === undefined) throw new Error('unknown environment')
       const config = readEnvConfig(env.parentPath)
+      if (pidAlive(env.setupPid)) {
+        try { process.kill(-env.setupPid, 'SIGTERM') } catch { try { process.kill(env.setupPid, 'SIGTERM') } catch { /* gone */ } }
+        env.setupPid = undefined
+        setupWatched.delete(env.id)
+      }
       if (config?.stop) {
         try { runScript(env, config.stop, 'stop') } catch (error) { logger.warn?.(String(error?.message ?? error)) }
       }
@@ -371,10 +473,29 @@ export function createEnvEngine(deps) {
         for (const pid of r.stdout.split(/\s+/).map(Number).filter((n) => n > 0)) { try { process.kill(pid, 'SIGTERM') } catch { /* gone */ } }
       }
       env.pid = undefined
-      if (env.state !== 'torn-down') env.state = 'stopped'
+      if (env.state !== 'torn-down' && env.state !== 'setup-failed') env.state = 'stopped'
       registry.put(env)
       changed()
       return view(env)
+    },
+
+    /** Re-run the setup script after a failure (or an interrupted preparation). */
+    async retrySetup(envId) {
+      const env = registry.get(envId)
+      if (env === undefined) throw new Error('unknown environment')
+      if (env.state === 'torn-down') throw new Error('environment is torn down; restore it first')
+      if (env.state === 'running') return view(env)
+      const config = readEnvConfig(env.parentPath)
+      if (config === undefined) throw new Error(`${env.parentPath} has no ${ENV_FILE}`)
+      runSetupAsync(env, config)
+      return view(env)
+    },
+
+    /** Uncommitted changes and unmerged commits in the worktree. */
+    dirty(envId) {
+      const env = registry.get(envId)
+      if (env === undefined) throw new Error('unknown environment')
+      return dirtyInfo(env)
     },
 
     async restart(envId) {
@@ -433,13 +554,13 @@ export function createEnvEngine(deps) {
       shareInto(env, config)
       excludeShares(env, config)
       env.state = 'stopped'
+      env.tornDownAt = undefined
       registry.put(env)
-      try { runScript(env, config.setup, 'setup') } catch (error) { logger.warn?.(String(error?.message ?? error)) }
       const child = await deps.workspaceRegistry.create(env.dir, `${parent?.title || basename(env.parentPath)} · ${env.slug}`)
       env.childWorkspaceId = child.id
       env.parentWorkspaceId = parent?.id ?? env.parentWorkspaceId
       registry.put(env)
-      changed()
+      runSetupAsync(env, config)
       return view(env)
     },
 

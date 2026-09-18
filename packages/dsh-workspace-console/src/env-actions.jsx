@@ -1,8 +1,9 @@
 /**
  * Environment controls in the conversation header.
  *
- * Shown only when the session's cwd is a worktree environment. While the env
- * is not running there is a single **Start environment** button; while it
+ * Shown only when the session's cwd is a worktree environment. While setup
+ * runs the header says "Preparing…"; a failed setup offers Retry. While the
+ * env is not running there is a single **Start environment** button; while it
  * runs, Stop / Restart plus the port list. `Logs` opens the last 200 lines.
  */
 
@@ -52,7 +53,14 @@ export function EnvActions({ sessionId, useSessions, cwd: explicitCwd }) {
       <span className="dshEnvSlug">{env?.slug ?? tornDown.slug}</span>
       {tornDown
         ? <button type="button" className="dshEnvButton" disabled={busy !== ''} onClick={() => act('restore')}>{busy === 'restore' ? 'Restoring…' : 'Restore environment'}</button>
-        : env.state === 'running'
+        : env.state === 'preparing'
+          ? <span className="dshEnvPreparing" title="Setup script is running (installs, database…). Start becomes available when it finishes."><span className="dshEnvSpinner" aria-hidden="true" />Preparing environment…</span>
+          : env.state === 'setup-failed'
+            ? <>
+              <span className="dshEnvFailed" title={env.lastError ?? 'setup failed'}>Setup failed</span>
+              <button type="button" className="dshEnvButton" disabled={busy !== ''} onClick={() => act('retry-setup')}>{busy === 'retry-setup' ? 'Retrying…' : 'Retry setup'}</button>
+            </>
+          : env.state === 'running'
           ? <>
             {ports ? <span className="dshEnvPorts">{env.ports.map((p) => <a key={p} href={`http://localhost:${p}`} target="_blank" rel="noreferrer">:{p}</a>)}</span> : null}
             <button type="button" className="dshEnvButton" disabled={busy !== ''} onClick={() => act('restart')} title="Restart environment">{busy === 'restart' ? '…' : '↻'}</button>

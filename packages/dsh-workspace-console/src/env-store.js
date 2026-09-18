@@ -8,9 +8,9 @@
  *     `dsh-env-registry` window event, which is how the sidebar tray (a separate
  *     package with no shared client service) nests env workspaces and keeps
  *     them in their parent's Space.
- *   - `window.__dshEnv__` = { createForWorkspace, isEnvProject } so the tray can
- *     route "new conversation" on an env-enabled project through a fresh
- *     worktree without importing this package.
+ *   - `window.__dshEnv__` = { isEnvProject, envForCwd, dirty, act, … } so the
+ *     tray can tear down / restore / warn about environments without importing
+ *     this package.
  */
 
 const BASE = '/native-terminal/envs'
@@ -98,6 +98,36 @@ export const envStore = {
   async log(envId) {
     return (await request(`/${envId}/log?lines=200`)).log
   },
+  /** Uncommitted changes / unmerged commits in an env worktree. */
+  async dirty(envId) {
+    return request(`/${envId}/dirty`)
+  },
+  /** Env project (workspace id) whose root path is `cwd`; undefined for worktrees and plain projects. */
+  projectForCwd(cwd) {
+    if (!cwd) return undefined
+    for (const [workspaceId, project] of Object.entries(snapshot.projects)) {
+      if (project.path === cwd && project.error === undefined) return workspaceId
+    }
+    return undefined
+  },
+}
+
+/**
+ * Per-session "Start on a new worktree" choice for blank conversations opened
+ * on an env project. Default is on; the toggle lives in the composer dock.
+ */
+const worktreeChoice = new Map()
+const choiceListeners = new Set()
+export const newWorktreeChoice = {
+  get: (sessionId) => worktreeChoice.get(sessionId) !== false,
+  set(sessionId, value) {
+    worktreeChoice.set(sessionId, value !== false)
+    for (const l of [...choiceListeners]) l()
+  },
+  subscribe(listener) {
+    choiceListeners.add(listener)
+    return () => choiceListeners.delete(listener)
+  },
 }
 
 /** Install the cross-package bridge; returns a disposer. */
@@ -109,6 +139,8 @@ export function installEnvBridge() {
     tornDownFor: (cwd) => envStore.tornDownFor(cwd),
     createForWorkspace: (id) => envStore.createForWorkspace(id),
     act: (id, action) => envStore.act(id, action),
+    dirty: (id) => envStore.dirty(id),
+    projectForCwd: (cwd) => envStore.projectForCwd(cwd),
     refresh: () => refreshEnvs(),
   }
   const off = envStore.subscribe(() => {})

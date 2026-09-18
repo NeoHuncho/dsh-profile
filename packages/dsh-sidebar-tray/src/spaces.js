@@ -8,6 +8,35 @@
 
 export const DEFAULT_SPACE_ID = 'default'
 export const DEFAULT_SPACE_NAME = 'Default'
+export const DEFAULT_SPACE_EMOJI = '🏠'
+export const SPACE_EMOJI_FALLBACK = '📁'
+
+/** Emoji presets offered by the "Change emoji" menu. */
+export const SPACE_EMOJI_PRESETS = ['🏠', '💼', '🎮', '🧪', '🚀', '🎨', '📚', '💡', '🔧', '🧠', '🌱', '🔥', '⚡', '🎯', '🧩', '🛠️', '📈', '🎵', '🌊', '🏗️', '🐙', '🦊', '🍀', '⭐']
+
+/** Coerce a user-typed emoji: first grapheme-ish chunk, or the fallback. */
+export function normalizeEmoji(raw, fallback = SPACE_EMOJI_FALLBACK) {
+  const text = String(raw ?? '').trim()
+  if (text === '') return fallback
+  // Keep at most one visual symbol (emoji + modifiers/ZWJ sequence).
+  const chars = [...text]
+  const out = []
+  for (const ch of chars) {
+    const code = ch.codePointAt(0)
+    const joiner = code === 0x200d || (code >= 0xfe00 && code <= 0xfe0f) || (code >= 0x1f3fb && code <= 0x1f3ff) || (code >= 0xe0020 && code <= 0xe007f)
+    if (out.length > 0 && !joiner && out[out.length - 1] !== '\u200d') break
+    out.push(ch)
+    if (out.length >= 8) break
+  }
+  return out.join('') || fallback
+}
+
+/** Coerce the stored Default-space display settings. */
+export function normalizeDefaultSpace(raw) {
+  const obj = raw !== null && typeof raw === 'object' ? raw : {}
+  const name = typeof obj.name === 'string' && obj.name.trim() !== '' ? obj.name.trim() : DEFAULT_SPACE_NAME
+  return { name, emoji: normalizeEmoji(obj.emoji, DEFAULT_SPACE_EMOJI) }
+}
 
 /** Coerce an untrusted `spaces` value into a clean array of spaces. */
 export function normalizeSpaces(raw) {
@@ -22,7 +51,7 @@ export function normalizeSpaces(raw) {
     const workspaceIds = Array.isArray(entry.workspaceIds)
       ? [...new Set(entry.workspaceIds.filter((w) => typeof w === 'string' && w.length > 0))]
       : []
-    out.push({ id, name: typeof entry.name === 'string' && entry.name.trim() !== '' ? entry.name : 'Space', workspaceIds })
+    out.push({ id, name: typeof entry.name === 'string' && entry.name.trim() !== '' ? entry.name : 'Space', emoji: normalizeEmoji(entry.emoji), workspaceIds })
   }
   return out
 }
@@ -35,6 +64,7 @@ export function normalizeSpaces(raw) {
  * @param workspaces - host workspaces in display order.
  * @param options.parentOf - optional `(workspace) => parentWorkspaceId | undefined`,
  *   so environment child workspaces follow their parent's space.
+ * @param options.defaultSpace - `{ name, emoji }` display of the built-in space.
  */
 export function deriveSpaces(spaces, workspaces, options = {}) {
   const claimed = new Map()
@@ -53,9 +83,10 @@ export function deriveSpaces(spaces, workspaces, options = {}) {
   for (const space of spaces) buckets.set(space.id, [])
   for (const workspace of workspaces) buckets.get(spaceOf(workspace)).push(workspace)
 
+  const def = normalizeDefaultSpace(options.defaultSpace)
   return [
-    { id: DEFAULT_SPACE_ID, name: DEFAULT_SPACE_NAME, builtin: true, workspaces: buckets.get(DEFAULT_SPACE_ID) },
-    ...spaces.map((space) => ({ id: space.id, name: space.name, builtin: false, workspaces: buckets.get(space.id) })),
+    { id: DEFAULT_SPACE_ID, name: def.name, emoji: def.emoji, builtin: true, workspaces: buckets.get(DEFAULT_SPACE_ID) },
+    ...spaces.map((space) => ({ id: space.id, name: space.name, emoji: space.emoji ?? SPACE_EMOJI_FALLBACK, builtin: false, workspaces: buckets.get(space.id) })),
   ]
 }
 

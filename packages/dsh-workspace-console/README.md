@@ -55,7 +55,7 @@ The package is a profile-local workspace dependency and is mounted from `~/.dsh/
 
 ## Worktree environments (`.agents/env.json`)
 
-A workspace with `.agents/env.json` gets a fresh git worktree per conversation. The sidebar tray asks this package (through `window.__dshEnv__`) to create one whenever a new conversation is started on such a project; the child workspace appears nested under the project and follows its Space.
+A workspace with `.agents/env.json` gets a fresh git worktree per conversation. Opening a new conversation creates nothing: a **"Start on a new worktree"** checkbox (ticked by default) sits above the composer, and the **first prompt** creates the worktree + child workspace and hops the conversation into it (the shipped `conversation.sendSession` is wrapped for blank sessions on an env-project root). Untick it to stay in the main checkout. The child workspace appears nested under the project and follows its Space.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
@@ -66,6 +66,8 @@ A workspace with `.agents/env.json` gets a fresh git worktree per conversation. 
 | `healthPort` | — | Index into the port block used to detect a running env started outside the engine |
 | `setup` / `start` / `stop` / `teardown` | — | Scripts run in the worktree with `ENV_SLUG ENV_DIR ENV_ROOT ENV_BRANCH ENV_INDEX ENV_PORT_0..N ENV_PORTS` |
 
-Lifecycle: **create** (worktree + share + setup) → **Start environment** button in the header (only while stopped) → Stop / Restart / Logs → **settle** the conversation ⇒ teardown (WIP commit on the env branch, `teardown` script, `git worktree remove`, child workspace deleted) → **unsettle** ⇒ restore from the branch.
+Lifecycle: **create** (worktree + share, then `setup` in the background: header shows *Preparing environment…*; a failed setup shows *Setup failed* + **Retry setup**) → **Start environment** button in the header (only while stopped) → Stop / Restart / Logs → **settle** the conversation ⇒ the tray warns about uncommitted work, then teardown (WIP commit on the env branch, `teardown` script, `git worktree remove`, child workspace deleted) → **unsettle** ⇒ restore from the branch (setup runs again).
 
-State: `$DSH_HOME/storages/env-registry.json`; logs: `$DSH_HOME/storages/env-logs/<id>.log`. HTTP: `GET/POST /native-terminal/envs`, `POST /native-terminal/envs/<id>/(start|stop|restart|teardown|restore|forget)`, `GET …/<id>/log`.
+States: `preparing` · `stopped` · `running` · `setup-failed` · `torn-down`.
+
+State: `$DSH_HOME/storages/env-registry.json`; logs: `$DSH_HOME/storages/env-logs/<id>.log`. HTTP: `GET/POST /native-terminal/envs`, `POST /native-terminal/envs/<id>/(start|stop|restart|teardown|restore|forget|retry-setup)`, `GET …/<id>/log`, `GET …/<id>/dirty` (`{dirty, ahead, summary}`).

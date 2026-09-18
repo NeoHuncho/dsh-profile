@@ -13,7 +13,7 @@
  * applies against the section as it stands when it reaches the write queue.
  */
 
-import { DEFAULT_SPACE_ID, normalizeSpaces } from './spaces.js'
+import { DEFAULT_SPACE_ID, normalizeDefaultSpace, normalizeEmoji, normalizeSpaces } from './spaces.js'
 
 const NS = 'sidebar-tray'
 
@@ -24,6 +24,7 @@ const DEFAULTS = {
   settledPreviewCount: 5,
   spaces: [],
   activeSpaceId: DEFAULT_SPACE_ID,
+  defaultSpace: { name: 'Default', emoji: '🏠' },
 }
 
 /** Coerce an untrusted namespace value into the shape the UI relies on. */
@@ -40,6 +41,7 @@ function normalize(value) {
     sessionsPerWorkspace: positive(raw.sessionsPerWorkspace, DEFAULTS.sessionsPerWorkspace),
     settledPreviewCount: positive(raw.settledPreviewCount, DEFAULTS.settledPreviewCount),
     spaces,
+    defaultSpace: normalizeDefaultSpace(raw.defaultSpace),
     // A deleted space must never leave the sidebar pointing at nothing.
     activeSpaceId: active === DEFAULT_SPACE_ID || spaces.some((s) => s.id === active) ? active : DEFAULT_SPACE_ID,
   }
@@ -145,17 +147,23 @@ export function createSettledStore(remote) {
       if (spaceId === state.activeSpaceId) return
       write({ activeSpaceId: spaceId })
     },
-    createSpace(name) {
+    createSpace(name, emoji) {
       const trimmed = String(name ?? '').trim()
       if (trimmed === '') return undefined
       const id = `space-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
-      write({ spaces: [...state.spaces, { id, name: trimmed, workspaceIds: [] }], activeSpaceId: id })
+      write({ spaces: [...state.spaces, { id, name: trimmed, emoji: normalizeEmoji(emoji), workspaceIds: [] }], activeSpaceId: id })
       return id
     },
+    /** Rename a space; the built-in Default is renamed through `defaultSpace`. */
     renameSpace(spaceId, name) {
       const trimmed = String(name ?? '').trim()
       if (trimmed === '') return
+      if (spaceId === DEFAULT_SPACE_ID) return write({ defaultSpace: { ...state.defaultSpace, name: trimmed } })
       write({ spaces: state.spaces.map((s) => (s.id === spaceId ? { ...s, name: trimmed } : s)) })
+    },
+    setSpaceEmoji(spaceId, emoji) {
+      if (spaceId === DEFAULT_SPACE_ID) return write({ defaultSpace: { ...state.defaultSpace, emoji: normalizeEmoji(emoji, state.defaultSpace.emoji) } })
+      write({ spaces: state.spaces.map((s) => (s.id === spaceId ? { ...s, emoji: normalizeEmoji(emoji, s.emoji) } : s)) })
     },
     /** Deleting a space returns its workspaces to Default (they are simply unclaimed). */
     deleteSpace(spaceId) {

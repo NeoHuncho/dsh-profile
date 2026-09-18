@@ -19,7 +19,7 @@ My [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web profi
 
 | Package | What it does |
 | --- | --- |
-| `dsh-sidebar-tray` | Replaces the sidebar workspace region: **Spaces** (Arc/Zen‑style groups of workspaces, `Ctrl+Shift+1…9` to switch), 5‑per‑workspace session groups, settled conversations drawer |
+| `dsh-sidebar-tray` | Replaces the sidebar workspace region: **Spaces** (Arc‑style emoji dock above Settings, `Ctrl+Shift+1…9` to switch, hold Ctrl for hints), 5‑per‑workspace session groups, settled conversations drawer |
 | `dsh-workspace-console` | Bottom‑docked native terminal (tabs/splits), per‑workspace action buttons from `.agents/actions.json`, and per‑conversation **worktree environments** from `.agents/env.json` |
 | `dsh-quick-search` | `Cmd/Ctrl+K` palette over projects and sessions |
 | `dsh-model-shortcuts` | `Ctrl+Shift+M` / `Ctrl+Shift+L` to switch model and reasoning effort |
@@ -46,7 +46,7 @@ After changing a plugin's `src/`, run its `node scripts/build.mjs` and restart t
 
 ## Worktree environments
 
-Any workspace with an `.agents/env.json` gets a fresh **git worktree per conversation**: a new conversation starts in `.worktrees/<slug>` on branch `env/<slug>`, with `node_modules` (or whatever `share` lists) symlinked from the main checkout and a block of free ports allocated by increment. Nothing starts automatically — a **Start environment** button appears in the session header while the environment is not running; **Settling** the conversation stops and deletes the worktree (uncommitted work is committed to the env branch first), **unsettling** restores it.
+Any workspace with an `.agents/env.json` gets a fresh **git worktree per conversation**. Opening a conversation creates nothing; a **"Start on a new worktree"** checkbox (on by default) sits above the composer and your **first message** creates `.worktrees/<slug>` on branch `env/<slug>` — `node_modules` (or whatever `share` lists) symlinked from the main checkout, a block of free ports allocated by increment, the `setup` script running in the background — and moves the conversation there. Nothing starts automatically: a **Start environment** button appears in the session header once setup is done and while the environment is not running. **Settling** the conversation warns about uncommitted work, then stops and deletes the worktree (changes are committed to the env branch first); **unsettling** restores it.
 
 ```jsonc
 // .agents/env.json

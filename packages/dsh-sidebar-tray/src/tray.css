@@ -274,123 +274,164 @@
 
 /* ── Spaces ─────────────────────────────────────────────────────────────── */
 
-/*
- * A horizontal strip of pills under the header (Arc/Zen style). The active
- * pill is filled; hovering a pill reveals its Ctrl+Shift number.
- */
-.tray-spaces {
-  position: relative;
+/* Active space heading at the top of the list. */
+.tray-space-header {
   display: flex;
   flex: none;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   margin: 0 0 6px;
-  padding: 0 4px;
-}
-
-.tray-space {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 5px;
-  height: 24px;
-  max-width: 100%;
-  padding: 0 9px;
-  color: var(--dsw-alias-label-secondary);
-  background: none;
-  border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
-  transition: background var(--ds-ease-fast, 120ms), color var(--ds-ease-fast, 120ms);
-}
-
-.tray-space:hover {
+  padding: 2px 6px;
   color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.tray-space-active,
-.tray-space-active:hover {
-  color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-interactive-bg-hover));
-  border-color: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
+  font-size: 14px;
   font-weight: 600;
+  line-height: 20px;
 }
 
-.tray-space-label {
+.tray-space-header-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.tray-space-header-name {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.tray-space-count {
+.tray-space-header-count {
   color: var(--dsw-alias-label-tertiary);
   font-size: 11px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
-.tray-space-key {
-  display: none;
-  min-width: 14px;
-  height: 14px;
+.tray-space-header-rail {
+  justify-content: center;
+  padding: 2px 0;
+  margin: 4px 0 2px;
+}
+
+/*
+ * The dock: centred emojis at the foot of the tray, directly above the
+ * shell's Settings seat. Right-click a space for its menu.
+ */
+.tray-space-dock {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: auto;
+  padding: 8px 4px 6px;
+  border-top: 0.5px solid var(--dsw-alias-border-l1, var(--dsw-alias-border-l2));
+}
+
+.tray-space {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--dsw-alias-label-secondary);
+  background: none;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  opacity: 0.55;
+  transition: background var(--ds-ease-fast, 120ms), opacity var(--ds-ease-fast, 120ms), transform var(--ds-ease-fast, 120ms);
+}
+
+.tray-space:hover {
+  opacity: 1;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-space-active,
+.tray-space-active:hover {
+  opacity: 1;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-interactive-bg-hover));
+  box-shadow: inset 0 0 0 0.5px var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
+}
+
+.tray-space-emoji {
+  display: block;
+}
+
+/* ⇧n hint shown while Ctrl/Cmd is held. */
+.tray-space-hint {
+  position: absolute;
+  top: -9px;
+  right: -3px;
+  min-width: 16px;
+  height: 15px;
   padding: 0 3px;
-  color: var(--dsw-alias-label-tertiary);
-  border: 0.5px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+  border: 0.5px solid var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
   border-radius: 4px;
-  font-size: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  font-family: inherit;
+  font-size: 9.5px;
   font-weight: 600;
-  line-height: 13px;
+  line-height: 14px;
   text-align: center;
   font-variant-numeric: tabular-nums;
-}
-
-.tray-space:hover .tray-space-key {
-  display: inline-block;
+  pointer-events: none;
 }
 
 .tray-space-add {
-  width: 24px;
-  padding: 0;
-  justify-content: center;
-  border-style: dashed;
+  width: 26px;
+  height: 26px;
+  color: var(--dsw-alias-label-tertiary);
+  border: 0.5px dashed var(--dsw-alias-border-l2);
+  border-radius: 50%;
   font-size: 13px;
+  opacity: 0.8;
 }
 
-/* Collapsed rail: vertical stack of initials. */
-.tray-spaces-rail {
+/* Collapsed rail: vertical column. */
+.tray-space-dock-rail {
   flex-direction: column;
   flex-wrap: nowrap;
-  padding: 0;
-  margin-top: 6px;
+  padding: 6px 0;
 }
 
-.tray-spaces-rail .tray-space {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  justify-content: center;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
+.tray-space-dock-rail .tray-space {
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
 }
 
 .tray-space-menu {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 4px;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
   display: flex;
   flex-direction: column;
-  min-width: 160px;
+  min-width: 170px;
   padding: 4px;
   background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
   border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.tray-space-dock-rail .tray-space-menu {
+  left: calc(100% + 6px);
+  bottom: 0;
+  transform: none;
 }
 
 .tray-space-menu-title {
@@ -415,6 +456,29 @@
 
 .tray-space-menu button:hover {
   background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tray-space-emoji-menu {
+  min-width: 220px;
+}
+
+.tray-space-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  padding: 2px 2px 6px;
+}
+
+.tray-space-menu .tray-space-emoji-option {
+  height: 32px;
+  padding: 0;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.tray-space-menu .tray-space-emoji-current {
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-interactive-bg-hover));
 }
 
 .tray-space-menu-danger {

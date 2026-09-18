@@ -23,7 +23,7 @@
 import { createSettledStore } from './settled-store.js'
 import { deriveGroups, deriveSearchResults, deriveSettled, workspaceLabel } from './derive.js'
 import { useShortcutActivation } from './shortcuts.js'
-import { DEFAULT_SPACE_ID, deriveSpaces, spaceInitials, spaceOfWorkspace } from './spaces.js'
+import { DEFAULT_SPACE_ID, SPACE_EMOJI_PRESETS, deriveSpaces, spaceOfWorkspace } from './spaces.js'
 import TRAY_CSS from './tray.css?raw'
 
 const SEARCH_DEBOUNCE_MS = 200
@@ -65,25 +65,64 @@ function StatusDot({ React, node }) {
 }
 
 /**
- * The Space strip at the top of the tray: one pill per space, `+` to add one.
- * Right-click (or the ⋯ button on the active pill) opens a small menu with
- * rename / move / delete. Ctrl+Shift+<n> selects the n-th pill.
+ * Hold Ctrl (or Cmd) → true. Used to reveal the ⇧n shortcut hints over the
+ * space emojis, Arc-style. Resets on blur so a chord released outside the
+ * window never leaves the hints stuck on.
  */
-function SpaceBar({ React, spaces, activeSpaceId, onSelect, onCreate, onRename, onDelete, onMove, rail }) {
+function useChordHeld(React) {
+  const [held, setHeld] = React.useState(false)
+  React.useEffect(() => {
+    const down = (event) => { if (event.ctrlKey || event.metaKey) setHeld(true) }
+    const up = (event) => { if (!(event.ctrlKey || event.metaKey)) setHeld(false) }
+    const reset = () => setHeld(false)
+    window.addEventListener('keydown', down, true)
+    window.addEventListener('keyup', up, true)
+    window.addEventListener('blur', reset)
+    return () => {
+      window.removeEventListener('keydown', down, true)
+      window.removeEventListener('keyup', up, true)
+      window.removeEventListener('blur', reset)
+    }
+  }, [])
+  return held
+}
+
+/** Active space heading at the top of the list: emoji + name. */
+function SpaceHeader({ React, space, rail }) {
+  return React.createElement(
+    'div',
+    { className: `tray-space-header${rail ? ' tray-space-header-rail' : ''}`, title: space.name },
+    React.createElement('span', { className: 'tray-space-header-emoji', 'aria-hidden': 'true' }, space.emoji),
+    rail ? null : React.createElement('span', { className: 'tray-space-header-name' }, space.name),
+    rail || space.workspaces.length === 0
+      ? null
+      : React.createElement('span', { className: 'tray-space-header-count' }, String(space.workspaces.length)),
+  )
+}
+
+/**
+ * The space dock (Arc-style): centred emojis at the foot of the tray, just
+ * above Settings. Click selects; right-click opens rename / emoji / move /
+ * delete. While Ctrl/Cmd is held each emoji shows its ⇧n hint.
+ */
+function SpaceDock({ React, spaces, activeSpaceId, onSelect, onCreate, onRename, onEmoji, onDelete, onMove, rail }) {
   const [menuFor, setMenuFor] = React.useState(null)
+  const [emojiFor, setEmojiFor] = React.useState(null)
+  const held = useChordHeld(React)
 
   React.useEffect(() => {
-    if (menuFor === null) return undefined
-    const close = () => setMenuFor(null)
+    if (menuFor === null && emojiFor === null) return undefined
+    const close = () => { setMenuFor(null); setEmojiFor(null) }
+    const onKey = (event) => { if (event.key === 'Escape') close() }
     window.addEventListener('pointerdown', close, true)
-    window.addEventListener('keydown', close, true)
+    window.addEventListener('keydown', onKey, true)
     return () => {
       window.removeEventListener('pointerdown', close, true)
-      window.removeEventListener('keydown', close, true)
+      window.removeEventListener('keydown', onKey, true)
     }
-  }, [menuFor])
+  }, [menuFor, emojiFor])
 
-  const pills = spaces.map((space, index) => {
+  const items = spaces.map((space, index) => {
     const active = space.id === activeSpaceId
     const number = index + 1
     return React.createElement(
@@ -92,62 +131,82 @@ function SpaceBar({ React, spaces, activeSpaceId, onSelect, onCreate, onRename, 
         type: 'button',
         key: space.id,
         className: `tray-space${active ? ' tray-space-active' : ''}`,
-        title: `${space.name} — Ctrl+Shift+${number <= 9 ? number : ''}`.replace(/Ctrl\+Shift\+$/, ''),
+        title: number <= 9 ? `${space.name} — Ctrl+Shift+${number}` : space.name,
+        'aria-label': space.name,
         'aria-pressed': active,
         onClick: () => onSelect(space.id),
         onContextMenu: (event) => {
           event.preventDefault()
+          setEmojiFor(null)
           setMenuFor(space.id)
         },
       },
-      React.createElement('span', { className: 'tray-space-label' }, rail ? spaceInitials(space.name) : space.name),
-      rail || space.workspaces.length === 0
-        ? null
-        : React.createElement('span', { className: 'tray-space-count' }, String(space.workspaces.length)),
-      number <= 9 && !rail ? React.createElement('kbd', { className: 'tray-space-key', 'aria-hidden': 'true' }, String(number)) : null,
+      React.createElement('span', { className: 'tray-space-emoji', 'aria-hidden': 'true' }, space.emoji),
+      held && number <= 9
+        ? React.createElement('kbd', { className: 'tray-space-hint', 'aria-hidden': 'true' }, `\u21E7${number}`)
+        : null,
     )
   })
 
   const menuSpace = menuFor === null ? undefined : spaces.find((s) => s.id === menuFor)
+  const emojiSpace = emojiFor === null ? undefined : spaces.find((s) => s.id === emojiFor)
+  const item = (label, onClick, extra = {}) =>
+    React.createElement('button', { type: 'button', role: 'menuitem', onClick, ...extra }, label)
+
   const menu =
     menuSpace === undefined
       ? null
       : React.createElement(
           'div',
           { className: 'tray-space-menu', role: 'menu', onPointerDown: (event) => event.stopPropagation() },
-          React.createElement('div', { className: 'tray-space-menu-title' }, menuSpace.name),
+          React.createElement('div', { className: 'tray-space-menu-title' }, `${menuSpace.emoji} ${menuSpace.name}`),
+          item('Rename…', () => { setMenuFor(null); onRename(menuSpace.id, menuSpace.name) }),
+          item('Change emoji…', () => { setMenuFor(null); setEmojiFor(menuSpace.id) }),
+          menuSpace.builtin ? null : item('Move left', () => { setMenuFor(null); onMove(menuSpace.id, -1) }),
+          menuSpace.builtin ? null : item('Move right', () => { setMenuFor(null); onMove(menuSpace.id, 1) }),
+          menuSpace.builtin
+            ? null
+            : item('Delete space', () => {
+                setMenuFor(null)
+                if (window.confirm(`Delete space \u201C${menuSpace.name}\u201D? Its workspaces move back to ${spaces[0].name}.`)) onDelete(menuSpace.id)
+              }, { className: 'tray-space-menu-danger' }),
+        )
+
+  const emojiMenu =
+    emojiSpace === undefined
+      ? null
+      : React.createElement(
+          'div',
+          { className: 'tray-space-menu tray-space-emoji-menu', role: 'menu', onPointerDown: (event) => event.stopPropagation() },
+          React.createElement('div', { className: 'tray-space-menu-title' }, `Emoji for ${emojiSpace.name}`),
           React.createElement(
-            'button',
-            { type: 'button', role: 'menuitem', onClick: () => { setMenuFor(null); onRename(menuSpace.id, menuSpace.name) } },
-            'Rename…',
-          ),
-          menuSpace.builtin
-            ? null
-            : React.createElement('button', { type: 'button', role: 'menuitem', onClick: () => { setMenuFor(null); onMove(menuSpace.id, -1) } }, 'Move left'),
-          menuSpace.builtin
-            ? null
-            : React.createElement('button', { type: 'button', role: 'menuitem', onClick: () => { setMenuFor(null); onMove(menuSpace.id, 1) } }, 'Move right'),
-          menuSpace.builtin
-            ? null
-            : React.createElement(
+            'div',
+            { className: 'tray-space-emoji-grid' },
+            ...SPACE_EMOJI_PRESETS.map((emoji) =>
+              React.createElement(
                 'button',
                 {
                   type: 'button',
-                  role: 'menuitem',
-                  className: 'tray-space-menu-danger',
-                  onClick: () => {
-                    setMenuFor(null)
-                    if (window.confirm(`Delete space “${menuSpace.name}”? Its workspaces move back to Default.`)) onDelete(menuSpace.id)
-                  },
+                  key: emoji,
+                  className: `tray-space-emoji-option${emoji === emojiSpace.emoji ? ' tray-space-emoji-current' : ''}`,
+                  title: emoji,
+                  onClick: () => { setEmojiFor(null); onEmoji(emojiSpace.id, emoji) },
                 },
-                'Delete space',
+                emoji,
               ),
+            ),
+          ),
+          item('Other…', () => {
+            setEmojiFor(null)
+            const typed = window.prompt('Paste or type an emoji', emojiSpace.emoji)
+            if (typed !== null && typed.trim() !== '') onEmoji(emojiSpace.id, typed)
+          }),
         )
 
   return React.createElement(
     'div',
-    { className: `tray-spaces${rail ? ' tray-spaces-rail' : ''}`, role: 'tablist', 'aria-label': 'Spaces' },
-    ...pills,
+    { className: `tray-space-dock${rail ? ' tray-space-dock-rail' : ''}`, role: 'tablist', 'aria-label': 'Spaces' },
+    ...items,
     React.createElement(
       'button',
       {
@@ -157,12 +216,15 @@ function SpaceBar({ React, spaces, activeSpaceId, onSelect, onCreate, onRename, 
         'aria-label': 'New space',
         onClick: () => {
           const name = window.prompt('Name the new space')
-          if (name !== null && name.trim() !== '') onCreate(name)
+          if (name === null || name.trim() === '') return
+          const emoji = window.prompt('Emoji for this space (optional)', '')
+          onCreate(name, emoji ?? '')
         },
       },
       '\uFF0B',
     ),
     menu,
+    emojiMenu,
   )
 }
 
@@ -278,8 +340,8 @@ function SidebarTray(props) {
 
   // Spaces: Default + user spaces, each with the workspaces it shows.
   const spaces = React.useMemo(
-    () => deriveSpaces(settled.spaces, allWorkspaces, { parentOf: (workspace) => envParents[workspace.workspaceId] }),
-    [settled.spaces, allWorkspaces, envParents],
+    () => deriveSpaces(settled.spaces, allWorkspaces, { parentOf: (workspace) => envParents[workspace.workspaceId], defaultSpace: settled.defaultSpace }),
+    [settled.spaces, settled.defaultSpace, allWorkspaces, envParents],
   )
   const activeSpace = spaces.find((space) => space.id === settled.activeSpaceId) ?? spaces[0]
   // Only the active space's workspaces feed the groups below; ungrouped
@@ -342,13 +404,15 @@ function SidebarTray(props) {
     if (target !== undefined) settledStore.setActiveSpace(target.id)
   })
 
-  const spaceBar = React.createElement(SpaceBar, {
+  const spaceHeader = React.createElement(SpaceHeader, { React, space: activeSpace, rail: wide === false })
+  const spaceBar = React.createElement(SpaceDock, {
     React,
     spaces,
     activeSpaceId: activeSpace.id,
     rail: wide === false,
     onSelect: (id) => settledStore.setActiveSpace(id),
-    onCreate: (name) => settledStore.createSpace(name),
+    onCreate: (name, emoji) => settledStore.createSpace(name, emoji),
+    onEmoji: (id, emoji) => settledStore.setSpaceEmoji(id, emoji),
     onRename: (id, current) => {
       const next = window.prompt('Rename space', current)
       if (next !== null && next.trim() !== '' && next.trim() !== current) settledStore.renameSpace(id, next)
@@ -359,7 +423,7 @@ function SidebarTray(props) {
 
   const moveWorkspaceToSpace = (workspaceId) => {
     const current = spaceOfWorkspace(settled.spaces, workspaceId)
-    const options = spaces.map((space, index) => `${index + 1}. ${space.name}${space.id === current ? ' (current)' : ''}`)
+    const options = spaces.map((space, index) => `${index + 1}. ${space.emoji} ${space.name}${space.id === current ? ' (current)' : ''}`)
     const answer = window.prompt(`Move workspace to which space?\n\n${options.join('\n')}\n\nEnter a number:`)
     if (answer === null) return
     const target = spaces[Number(answer.trim()) - 1]
@@ -446,6 +510,7 @@ function SidebarTray(props) {
           '\uFF0B',
         ),
       ),
+      spaceHeader,
       spaceBar,
     )
   }
@@ -669,7 +734,7 @@ function SidebarTray(props) {
         '\uFF0B',
       ),
     ),
-    spaceBar,
+    spaceHeader,
     flowError === null
       ? null
       : React.createElement('div', { className: 'tray-status' }, `Couldn’t add workspace: ${flowError}`),
@@ -761,6 +826,7 @@ function SidebarTray(props) {
               )
             : null,
         ),
+    spaceBar,
   )
 }
 
@@ -807,25 +873,11 @@ export function apply(ctx) {
   const tray = {
     open: (sessionId) => uiWorkspace.openSession(sessionId),
     /**
-     * New conversation. On an env-enabled project (one with `.agents/env.json`)
-     * this first creates a fresh worktree + child workspace and starts the
-     * session there — the environment itself stays stopped until the user
-     * presses Start in the header. A worktree that is already an env child
-     * gets an ordinary session in place.
+     * New conversation. Nothing environment-related happens here: on an
+     * env-enabled project the worktree is created by dsh-workspace-console
+     * when the first prompt is sent (see its "Start on a new worktree" toggle).
      */
-    startSession: async (workspaceId) => {
-      const bridge = envBridge()
-      if (workspaceId !== undefined && bridge?.isEnvProject(workspaceId) && bridge.envForWorkspace(workspaceId) === undefined) {
-        try {
-          const env = await bridge.createForWorkspace(workspaceId)
-          if (env?.childWorkspaceId) return uiWorkspace.startSession(env.childWorkspaceId)
-        } catch (error) {
-          console.error('[dsh-sidebar-tray] could not create environment, starting in the main checkout', error)
-          window.alert(`Could not create a worktree environment:\n${error?.message ?? error}\n\nStarting the conversation in the main checkout instead.`)
-        }
-      }
-      return uiWorkspace.startSession(workspaceId)
-    },
+    startSession: (workspaceId) => uiWorkspace.startSession(workspaceId),
     forkSession: (sessionId) => {
       Promise.resolve(uiWorkspace.forkSession(sessionId)).catch(() => {})
     },
@@ -842,13 +894,32 @@ export function apply(ctx) {
     },
     /**
      * Settling a conversation that lives in a worktree environment stops and
-     * deletes that environment (uncommitted work is committed to its branch,
-     * which is kept). Unsettling restores the worktree from that branch.
+     * deletes that environment. Uncommitted changes (or commits not yet in the
+     * main checkout) trigger a confirmation first; on OK they are committed to
+     * the env branch, which is kept. Unsettling restores the worktree.
      */
-    settle: (sessionId, cwd) => {
-      settledStore.settle(sessionId)
+    settle: async (sessionId, cwd) => {
       const bridge = envBridge()
       const env = cwd && bridge ? bridge.envForCwd(cwd) : undefined
+      if (env !== undefined) {
+        let info
+        try {
+          info = await bridge.dirty(env.id)
+        } catch (error) {
+          console.error('[dsh-sidebar-tray] could not inspect environment', error)
+        }
+        if (info?.dirty || info?.ahead > 0) {
+          const parts = []
+          if (info.dirty) parts.push(`uncommitted changes:\n${info.summary}`)
+          if (info.ahead > 0) parts.push(`${info.ahead} commit${info.ahead === 1 ? '' : 's'} not in the main checkout`)
+          const ok = window.confirm(
+            `Worktree \u201C${env.slug}\u201D (branch ${env.branch}) has ${parts.join('\n\nand ')}\n\n` +
+              'Settling stops the environment, commits the changes as WIP on that branch and removes the worktree. Continue?',
+          )
+          if (!ok) return
+        }
+      }
+      settledStore.settle(sessionId)
       if (env !== undefined) {
         Promise.resolve(bridge.act(env.id, 'teardown')).catch((error) => {
           console.error('[dsh-sidebar-tray] environment teardown failed', error)
